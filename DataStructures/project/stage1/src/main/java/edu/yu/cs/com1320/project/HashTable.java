@@ -20,4 +20,5 @@ public interface HashTable<Key,Value>
      * @return if the key was already present in the HashTable, return the previous value stored for the key. If the key was not already present, return null.
      */
     Value put(Key k, Value v);
+
 }

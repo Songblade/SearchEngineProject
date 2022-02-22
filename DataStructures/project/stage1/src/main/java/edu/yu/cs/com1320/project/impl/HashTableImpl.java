@@ -5,7 +5,7 @@ import edu.yu.cs.com1320.project.HashTable;
 // Right now, I have a problem that I changed my file path halfway through and now IntelliJ lost track of the project
 // But I can't tell if the problem is in IntelliJ or in Maven, so I don't know what to fix
 // Hopefully, tomorrow we will learn Maven and I will learn how to fix the problem
-public class HashTableImpl<Key, Value> implements HashTable {
+public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
 
     private ChainLink[] table; // the table in the HashTable
     // This is the constructor to create a new HashTable
@@ -23,12 +23,24 @@ public class HashTableImpl<Key, Value> implements HashTable {
         // I feel like there should be something else here, but can't think of it
     }
 
+    // returns a hashcode compatible with my length-5 table
+    private int hashFunction(Key k) {
+        return Math.abs(k.hashCode()) % table.length;
+    }
+
     /**
      * @param k the key whose value should be returned
      * @return the value that is stored in the HashTable for k, or null if there is no such key in the table
      */
     @Override
     public Value get(Key k) {
+        int hashValue = hashFunction(k);
+        ChainLink<Key, Value> link = table[hashValue]; // getting the right link
+        while (link != null) {
+            if (k.equals(link.k)) {
+                return link.v;
+            }
+        }
         return null;
     }
 
@@ -40,14 +52,29 @@ public class HashTableImpl<Key, Value> implements HashTable {
      */
     @Override
     public Value put(Key k, Value v) {
-        ChainLink link = table[]
-        return null;
+        int hashValue = hashFunction(k);
+        ChainLink<Key, Value> link = table[hashValue]; // getting the right link
+        ChainLink<Key, Value> previousLink = null; // Has the link before this one, so no problems if
+        // I go through the links until I find the right one or we run out of links
+        while (link != null) {
+            if (k.equals(link.k)) {
+                Value previous = link.v;
+                link.v = v;
+                return previous;
+            }
+            previousLink = link;
+            link = link.nextLink;
+        }
+        // if we don't find the key, because link == null, we add a new link to the end
+        ChainLink<Key, Value> newLink = new ChainLink(k, v);
+        if (previousLink != null) {
+            previousLink.nextLink = newLink;
+        } else { // if this will be the first link on the chain
+            table[hashValue] = newLink; // starting the chain
+        }
+        return null; // because we didn't replace anything
     }
 
-    // returns a hashcode compatible with my length-5 table
-    private int hashFunction(Key k) {
-        return Math.abs(k.hashCode()) % table.length;
-    }
 
     protected class ChainLink<Key, Value> {
         // I am going to have each chain contain the key, the value, and the next chain link
