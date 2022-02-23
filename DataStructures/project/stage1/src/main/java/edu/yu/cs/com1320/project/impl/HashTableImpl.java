@@ -9,6 +9,15 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
 
     private ChainLink[] table; // the table in the HashTable
     // This is the constructor to create a new HashTable
+
+    /*public static void main(String[] args) {
+        for (int i = -5; i < 5; i++) {
+            Integer realI = i;
+            System.out.println(i + ": " + realI.hashCode() + " but really " + Math.abs(realI.hashCode()) % 5);
+        }
+        System.out.println("Don't forget to delete this method.");
+    }*/
+
     public HashTableImpl() {
         // I need to create the array
         // The array will be an array of ChainLinks
@@ -20,6 +29,7 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
 
     private HashTableImpl(int length) {
         table = new ChainLink[length];
+        assert table.length == 5;
         // I feel like there should be something else here, but can't think of it
     }
 
@@ -34,12 +44,16 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
      */
     @Override
     public Value get(Key k) {
+        if (k == null) {
+            throw new IllegalArgumentException("null keys are not supported");
+        }
         int hashValue = hashFunction(k);
-        ChainLink<Key, Value> link = table[hashValue]; // getting the right link
+        ChainLink link = table[hashValue]; // getting the right link
         while (link != null) {
             if (k.equals(link.k)) {
-                return link.v;
+                return (Value) link.v;
             }
+            link = link.nextLink;
         }
         return null;
     }
@@ -52,13 +66,16 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
      */
     @Override
     public Value put(Key k, Value v) {
+        if (k == null) {
+            throw new IllegalArgumentException("null keys are not supported");
+        }
         int hashValue = hashFunction(k);
-        ChainLink<Key, Value> link = table[hashValue]; // getting the right link
-        ChainLink<Key, Value> previousLink = null; // Has the link before this one, so no problems if
+        ChainLink link = table[hashValue]; // getting the right link
+        ChainLink previousLink = null; // Has the link before this one, so no problems if
         // I go through the links until I find the right one or we run out of links
         while (link != null) {
             if (k.equals(link.k)) {
-                Value previous = link.v;
+                Value previous = (Value) link.v;
                 link.v = v;
                 return previous;
             }
@@ -66,7 +83,7 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
             link = link.nextLink;
         }
         // if we don't find the key, because link == null, we add a new link to the end
-        ChainLink<Key, Value> newLink = new ChainLink(k, v);
+        ChainLink newLink = new ChainLink(k, v);
         if (previousLink != null) {
             previousLink.nextLink = newLink;
         } else { // if this will be the first link on the chain
@@ -76,16 +93,18 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
     }
 
 
-    protected class ChainLink<Key, Value> {
+    protected static class ChainLink {
         // I am going to have each chain contain the key, the value, and the next chain link
         // All the values are protected, because since only I have access to it, and I was going to have
         // getters and setters anyway, I am giving maximum freedom
         // Something is probably going to go wrong
-        protected Key k; // The key being stored
-        protected Value v; // The value being stored
+        // I got rid of the parameterized types, because it was a problem with generics
+        // But it shouldn't be a problem for my code, because it already has generics further up
+        protected Object k; // The key being stored
+        protected Object v; // The value being stored
         protected ChainLink nextLink; // The next chain, null if this is the last chain
 
-        protected ChainLink(Key k, Value v) {
+        protected ChainLink(Object k, Object v) {
             this.k = k;
             this.v = v;
             // nextLink is automatically null
