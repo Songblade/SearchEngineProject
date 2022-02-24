@@ -53,6 +53,9 @@ public class DocumentImpl implements Document {
      */
     @Override
     public byte[] getDocumentBinaryData() {
+        if (binaryData == null) {
+            return null;
+        }
         return Arrays.copyOf(binaryData, binaryData.length);
     }
 
