@@ -78,7 +78,7 @@ public class DocumentStoreTest {
         Document doc = new DocumentImpl(uri1, bytes1);
         byte[] bytes2 = {(byte) 1};
         InputStream stream2 = new ByteArrayInputStream(bytes2);
-        URI uri2 = new URI("http://java.sun.com/outdex.html");
+        URI uri2 = new URI("http://java.sun.com/index.html");
         assertEquals(doc.hashCode(), store.putDocument(stream2, uri2, DocumentFormat.BINARY));
     }
 

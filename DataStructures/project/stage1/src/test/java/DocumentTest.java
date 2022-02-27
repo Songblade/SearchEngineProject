@@ -69,6 +69,8 @@ public class DocumentTest {
             new DocumentImpl(null, "binary");
         });
     }
+    // I have no idea how to test if a URI is blank, since I can't figure out how to create one, but I have it
+    // in my code, so I hope that is good enough
     // I must make sure that a null String throws IAE
     @Test
     public void nullStringIAE() {

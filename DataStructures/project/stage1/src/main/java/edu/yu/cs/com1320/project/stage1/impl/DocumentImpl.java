@@ -13,9 +13,7 @@ public class DocumentImpl implements Document {
 
     // constructor that uses text
     public DocumentImpl(URI uri, String text) {
-        if (uri == null) {
-            throw new IllegalArgumentException("URI is null");
-        }
+        validateURI(uri);
         if (text == null) {
             throw new IllegalArgumentException("text is null");
         } // Piazza says we don't need to worry about a blank URI
@@ -27,9 +25,7 @@ public class DocumentImpl implements Document {
     }
 
     public DocumentImpl(URI uri, byte[] binaryData) {
-        if (uri == null) {
-            throw new IllegalArgumentException("URI is null");
-        }
+        validateURI(uri);
         if (binaryData == null) {
             throw new IllegalArgumentException("binary data is null");
         }
@@ -38,6 +34,16 @@ public class DocumentImpl implements Document {
         }
         this.uri = uri;
         this.binaryData = Arrays.copyOf(binaryData, binaryData.length);
+    }
+
+    // if the URI being inputted is null or empty, this will throw errors for my constructors
+    private void validateURI(URI uri) {
+        if (uri == null) {
+            throw new IllegalArgumentException("URI is null");
+        }
+        if (uri.toASCIIString().isBlank()) {
+            throw new IllegalArgumentException("URI is blank");
+        }
     }
 
     /**
