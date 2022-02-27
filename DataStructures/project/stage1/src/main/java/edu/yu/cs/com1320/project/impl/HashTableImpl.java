@@ -10,14 +10,6 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
     private ChainLink[] table; // the table in the HashTable
     // This is the constructor to create a new HashTable
 
-    /*public static void main(String[] args) {
-        for (int i = -5; i < 5; i++) {
-            Integer realI = i;
-            System.out.println(i + ": " + realI.hashCode() + " but really " + Math.abs(realI.hashCode()) % 5);
-        }
-        System.out.println("Don't forget to delete this method.");
-    }*/
-
     public HashTableImpl() {
         // I need to create the array
         // The array will be an array of ChainLinks
