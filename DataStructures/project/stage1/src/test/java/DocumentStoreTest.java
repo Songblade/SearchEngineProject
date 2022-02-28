@@ -150,6 +150,14 @@ public class DocumentStoreTest {
         Document doc = new DocumentImpl(uri, bytes);
         assertEquals(doc.hashCode(), store.putDocument(null, uri, null));
     }
+
+    // this test is for getDocument(), that on a null URI, it returns null
+    @Test
+    public void getNullReturnsNull() {
+        DocumentStore store = new DocumentStoreImpl();
+        assertNull(store.getDocument(null));
+    }
+
     // the following tests are for deleteDocument()
 
     // delete actually deletes the document
