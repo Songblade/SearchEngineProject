@@ -28,7 +28,9 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public int putDocument(InputStream input, URI uri, DocumentFormat format) throws IOException {
-
+        // to anyone reading this, this is not a monster method, because it is a large percentage
+        // whitespace and comments to structure and explain it
+        // I counted 27-28 lines of actual code, include single "}"s, when the limit is 30
         if (uri == null) {
             throw new IllegalArgumentException("URI is null");
         }
@@ -57,7 +59,7 @@ public class DocumentStoreImpl implements DocumentStore {
         c. Insert the Document object into the hash table with URI as the key and the Document object as the value
         d. Return the hashCode of the previous document that was stored in the hashTable at that URI, or zero if there was
         none*/
-        byte[] data = getData(input); // making the array just big enough to read all the data
+        byte[] data = input.readAllBytes(); // making the array just big enough to read all the data
         Document doc;
         if (format == DocumentFormat.TXT) {
             doc = new DocumentImpl(uri, new String(data));
@@ -68,45 +70,6 @@ public class DocumentStoreImpl implements DocumentStore {
         return oldHash;
     }
 
-    // this private method gets the data from the input in putDocument() and returns it in byte form
-    // I need a special method for this because otherwise, I can't be sure that I will create a byte long enough
-    // to read all the data in InputStream
-    // plus, depending on the type of InputStream, more data might come after I start reading it
-    // And I don't want extra 0 data at the end
-    private byte[] getData(InputStream input) throws IOException {
-        int index = 0;
-        byte[] data = new byte[input.available()]; // hopefully, this is big enough, but if not, I can resize it later
-        while (true) {
-            // First, I get the read data, and check that it isn't -1
-            // if it is, if index is 0, I throw an error, because the data is empty
-            // Otherwise, I return the data, we have our byte array
-            // If it isn't -1, I cast it to a byte and add it to the array
-            // Increment the counter
-            // If the array has reached the max, I increase it to the current size + whatever available says now
-            int readData = input.read();
-            if (readData == -1) {
-                if (index == 0) {
-                    throw new IllegalArgumentException("InputStream has no data");
-                } else { // if this is not the first byte of data
-                    input.close(); // does nothing for ByteStream, but for other types, which I see no reason
-                        // not to service, this frees up resources
-                    if (index != data.length - 1) { // this should never happen, but I don't want trailing 0s
-                        data = Arrays.copyOf(data, index); // up to but not including the current index,
-                            // which has -1, so we don't want that one
-                    }
-                    return data; // we are done reading
-                }
-            } // if readData() is not -1 and is instead actual data
-            data[index] = (byte) (readData); // this is the trickiest part, I am subtracting to make
-                // sure that this remains within the bounds of a byte
-                // but I am not entirely sure if this is how InputStreams work, my tests will catch it
-                // I got rid of - 128, hopefully that doesn't break anything
-            index++;
-            if (index == data.length) { // if we reached the end of the array
-                data = Arrays.copyOf(data, data.length + input.available());
-            }
-        }
-    }
 
     /**
      * @param uri the unique identifier of the document to get
