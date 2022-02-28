@@ -36,8 +36,8 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
      */
     @Override
     public Value get(Key k) {
-        if (k == null) {
-            throw new IllegalArgumentException("null keys are not supported");
+        if (k == null) { // since it isn't in the table, it returns null
+            return null;
         }
         int hashValue = hashFunction(k);
         ChainLink link = table[hashValue]; // getting the right link

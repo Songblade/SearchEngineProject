@@ -9,9 +9,6 @@ public class HashTableTest {
     public HashTableTest() {
         // This should do nothing
     }
-    // Until my Piazza questions on how this all works get answered, I am not testing, at least not with Maven
-    // It is possible that my problem is that I do not actually have Maven, so I will wait until (if) Professor
-    // Wymore answers that email
 
     // I will now figure out what sort of tests I need
     // I need to check that if I add a key-variable pair, get returns the value
@@ -45,6 +42,12 @@ public class HashTableTest {
         table.put(3, 3.14156);
         table.put(3, null);
         assertNull(table.get(3));
+    }
+    // I need to test that get null returns null
+    @Test
+    public void getNullWorksNull() {
+        HashTable<Integer, Double> table = new HashTableImpl<>();
+        assertNull(table.get(null));
     }
     // I need to make sure get returns null even when something was never added, even if something with the same hash was
     @Test
