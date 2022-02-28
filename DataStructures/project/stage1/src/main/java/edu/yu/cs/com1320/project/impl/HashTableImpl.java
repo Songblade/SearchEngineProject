@@ -88,9 +88,8 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
 
     private static class ChainLink {
         // I am going to have each chain contain the key, the value, and the next chain link
-        // All the values are protected, because since only I have access to it, and I was going to have
-        // getters and setters anyway, I am giving maximum freedom
-        // Something is probably going to go wrong
+        // It turns out private values can be accessed in the outer class, so there is no point in getters
+        // or setters here
         // I got rid of the parameterized types, because it was a problem with generics
         // But it shouldn't be a problem for my code, because it already has generics further up
         private Object k; // The key being stored
