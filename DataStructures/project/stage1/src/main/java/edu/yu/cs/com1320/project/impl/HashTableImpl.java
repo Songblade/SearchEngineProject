@@ -86,18 +86,18 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
     }
 
 
-    protected static class ChainLink {
+    private static class ChainLink {
         // I am going to have each chain contain the key, the value, and the next chain link
         // All the values are protected, because since only I have access to it, and I was going to have
         // getters and setters anyway, I am giving maximum freedom
         // Something is probably going to go wrong
         // I got rid of the parameterized types, because it was a problem with generics
         // But it shouldn't be a problem for my code, because it already has generics further up
-        protected Object k; // The key being stored
-        protected Object v; // The value being stored
-        protected ChainLink nextLink; // The next chain, null if this is the last chain
+        private Object k; // The key being stored
+        private Object v; // The value being stored
+        private ChainLink nextLink; // The next chain, null if this is the last chain
 
-        protected ChainLink(Object k, Object v) {
+        private ChainLink(Object k, Object v) {
             this.k = k;
             this.v = v;
             // nextLink is automatically null
