@@ -16,6 +16,7 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
         // It will have a length of 5, as required
         // I will make a second constructor, private for now, that accepts a constructor of any length
         // Just in case we need that in the future, I can just make it public
+        // There shouldn't be a problem of a second constructor if it is private
         this(5);
     }
 
@@ -58,8 +59,8 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
      */
     @Override
     public Value put(Key k, Value v) {
-        if (k == null) {
-            throw new IllegalArgumentException("null keys are not supported");
+        if (k == null) { // this was what Piazza said to do, though I don't think it mattered much
+            return null;
         }
         int hashValue = hashFunction(k);
         ChainLink link = table[hashValue]; // getting the right link
