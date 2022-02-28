@@ -181,4 +181,10 @@ public class DocumentStoreTest {
         store.putDocument(stream, uri, DocumentFormat.BINARY);
         assertTrue(store.deleteDocument(uri));
     }
+    // delete returns false if no document was there
+    @Test
+    public void deleteNullReturnsFalse() throws URISyntaxException {
+        DocumentStore store = new DocumentStoreImpl();
+        assertFalse(store.deleteDocument(null));
+    }
 }

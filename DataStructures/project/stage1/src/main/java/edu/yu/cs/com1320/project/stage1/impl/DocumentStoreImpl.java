@@ -123,14 +123,10 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public boolean deleteDocument(URI uri) {
-        if (uri == null) {
-            throw new IllegalArgumentException("URI is null");
-        }
-
-        if (table.get(uri) == null) {
+        if (uri == null || table.get(uri) == null) {
             return false; // not deleting anything, because nothing to delete
-        } // if there is something to delete
-
+        }
+        // if there is something to delete
         table.put(uri, null);
         return true;
     }
