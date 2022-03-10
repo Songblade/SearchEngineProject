@@ -8,12 +8,14 @@ import edu.yu.cs.com1320.project.HashTable;
 public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
 
     private ChainLink[] table; // the table in the HashTable
+    private int contentCount; // this says how many items are in the array, since I have no good way of knowing
+        // otherwise
     // This is the constructor to create a new HashTable
 
     public HashTableImpl() {
         // I need to create the array
         // The array will be an array of ChainLinks
-        // It will have a length of 5, as required
+        // I will keep the base length of 5, since I was never told to change it
         // I will make a second constructor, private for now, that accepts a constructor of any length
         // Just in case we need that in the future, I can just make it public
         // There shouldn't be a problem of a second constructor if it is private
@@ -22,7 +24,6 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
 
     private HashTableImpl(int length) {
         table = new ChainLink[length];
-        assert table.length == 5;
         // I feel like there should be something else here, but can't think of it
     }
 
@@ -82,7 +83,35 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
         } else { // if this will be the first link on the chain
             table[hashValue] = newLink; // starting the chain
         }
+        contentCount++; // since we just added a new link
+        if (contentCount > 0.75 * table.length) { // the recommended threshold
+            resizeArray();
+        }
         return null; // because we didn't replace anything
+    }
+
+    private void resizeArray() {
+        // I must store the old table
+        ChainLink[] oldTable = table;
+        // I must create a new array with double the length
+        // this way, put will put into the correct table, and hashFunction will hash correctly
+        table = new ChainLink[table.length * 2];
+        // I must set the contentCount to 0, because otherwise, I will increase it more than I should
+        contentCount = 0;
+        // Then I must traverse the old array
+        for (ChainLink slot : oldTable) {
+            // If the slot isn't null, I must traverse the chainlinks
+            if (slot != null) {
+                ChainLink link = slot;
+                while (link != null) {
+                    // I must take each link and add its key-value pair to the new array
+                    // This should return the contentCount to its old value, since put() does that
+                    put((Key) link.k, (Value) link.v);
+                    link = link.nextLink;
+                }
+            }
+        }
+        // at this point, everything should be in its new slot, and Java can throw the old table in the trash
     }
 
 
