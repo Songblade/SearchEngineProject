@@ -2,7 +2,6 @@ package edu.yu.cs.com1320.project;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-import edu.yu.cs.com1320.project.HashTable;
 import edu.yu.cs.com1320.project.impl.HashTableImpl;
 
 public class HashTableTest {
@@ -77,6 +76,20 @@ public class HashTableTest {
         HashTable<Integer, String> table = new HashTableImpl<>();
         table.put(4, "The best number");
         assertNull(table.put(-4, "An even better number"));
+    }
+
+    @Test
+    public void getAndPutWorkLong() {
+        HashTable<Integer, String> table = new HashTableImpl<>();
+        for (int i = 0; i < 1000000; i++) {
+            table.put(i, Integer.toString(i));
+        }
+        for (int i = 0; i < 1000000; i++) {
+            assertEquals(Integer.toString(i), table.get(i));
+        }
+        for (int i = 999999; i >= 0; i--) {
+            assertEquals(Integer.toString(i), table.get(i));
+        }
     }
 
 }

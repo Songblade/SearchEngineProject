@@ -70,11 +70,26 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
         while (link != null) {
             if (k.equals(link.k)) {
                 Value previous = (Value) link.v;
-                link.v = v;
+                if (v != null) {
+                    link.v = v;
+                } else {
+                    // I was told that I now need to actually remove links from the hashtable instead of just giving them
+                    // a null value
+                    if (previousLink == null) {
+                        table[hashValue] = null;
+                    } else {
+                        previousLink.nextLink = link.nextLink;
+                    }
+                    contentCount--; // Since it is no longer taking up space
+                }
                 return previous;
             }
             previousLink = link;
             link = link.nextLink;
+        }
+        // I don't want to add a new link with a null value
+        if (v == null) {
+            return null;
         }
         // if we don't find the key, because link == null, we add a new link to the end
         ChainLink newLink = new ChainLink(k, v);
