@@ -26,33 +26,64 @@ public class DocumentStoreTest {
         assertEquals(expected.getKey(), docReturn.getKey());
     }
 
-    // the following tests test putDocument(), though really also getDocument()
-
-    // I want a test that adding 6 documents can still get all 6
-    // This will involve both text and binary documents
-    @Test
-    public void lotsOfDocs() throws URISyntaxException, IOException {
-        DocumentStore store = new DocumentStoreImpl();
+    // the following methods are so I can use the same group of documents without rewriting their code
+    // for every test
+    private byte[][] getByteData() {
         byte[][] bytes = new byte[6][1];
         for (int i = 0; i < 6; i++) {
             bytes[i][0] = (byte) i;
         }
+        return bytes;
+    }
+
+    private InputStream[] getStreams() {
         InputStream[] streams = new InputStream[6];
+        byte[][] bytes = getByteData();
         for (int i = 0; i < 6; i++) {
             streams[i] = new ByteArrayInputStream(bytes[i]);
         }
+        return streams;
+    }
+
+    private URI[] getURIs() throws URISyntaxException {
         URI[] uris = {new URI("http://java.sun.com/index.html"), new URI("http://java.sun.com/outdex.html"),
                 new URI("http://java.sun.com/insideoutdex.html"), new URI("http://java.sun.com/outsideindex.html"),
                 new URI("http://java.sun.com/rightsideleftdex.html"), new URI("http://java.sun.com/pokedex.html")};
+        return uris;
+    }
 
+    private Document[] getDocs() throws URISyntaxException {
+        byte[][] bytes = getByteData();
+        URI[] uris = getURIs();
         Document[] docs = {new DocumentImpl(uris[0], new String(bytes[0])), new DocumentImpl(uris[1], bytes[1]), new DocumentImpl(uris[2], new String(bytes[2])),
                 new DocumentImpl(uris[3], bytes[3]), new DocumentImpl(uris[4], new String(bytes[4])), new DocumentImpl(uris[5], bytes[5])};
+        return docs;
+    }
+
+    private DocumentStore getStore() throws URISyntaxException, IOException {
+        DocumentStore store = new DocumentStoreImpl();
+        InputStream[] streams = getStreams();
+        URI[] uris = getURIs();
         store.putDocument(streams[0], uris[0], DocumentFormat.TXT);
         store.putDocument(streams[1], uris[1], DocumentFormat.BINARY);
         store.putDocument(streams[2], uris[2], DocumentFormat.TXT);
         store.putDocument(streams[3], uris[3], DocumentFormat.BINARY);
         store.putDocument(streams[4], uris[4], DocumentFormat.TXT);
         store.putDocument(streams[5], uris[5], DocumentFormat.BINARY);
+        return store;
+    }
+
+
+
+    // the following tests test putDocument(), though really also getDocument()
+
+    // I want a test that adding 6 documents can still get all 6
+    // This will involve both text and binary documents
+    @Test
+    public void lotsOfDocs() throws URISyntaxException, IOException {
+        DocumentStore store = getStore();
+        URI[] uris = getURIs();
+        Document[] docs = getDocs();
         for (int i = 0; i < 6; i++) {
             testDocumentEquality(docs[i], store.getDocument(uris[i]));
         }
@@ -195,5 +226,198 @@ public class DocumentStoreTest {
     public void deleteNullReturnsFalse() {
         DocumentStore store = new DocumentStoreImpl();
         assertFalse(store.deleteDocument(null));
+    }
+
+    // any tests after here are for undo()
+    // undoing the first command
+    @Test
+    public void undoWorksFirst() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = new DocumentStoreImpl();
+        byte[] bytes = {(byte) 0};
+        InputStream stream = new ByteArrayInputStream(bytes);
+        URI uri = new URI("http://java.sun.com/index.html");
+        store.putDocument(stream, uri, DocumentFormat.BINARY);
+        store.undo();
+        assertNull(store.getDocument(uri));
+    }
+
+    // undoing a later command, but not the others
+    @Test
+    public void undoWorksLater() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = getStore();
+        URI[] uris = getURIs();
+        Document[] docs = getDocs();
+
+        store.undo();
+        assertNull(store.getDocument(uris[5]));
+        testDocumentEquality(docs[4], store.getDocument(uris[4]));
+    }
+
+    // undoing all the commands
+    @Test
+    public void undoWorksForMultiple() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = getStore();
+        URI[] uris = getURIs();
+        for (int i = 0; i < 6; i++) {
+            store.undo();
+        }
+        for (int i = 0; i < 6; i++) {
+            assertNull(store.getDocument(uris[i]));
+        }
+    }
+
+    // undoing a command where there was already a previous document gets you that previous document
+    @Test
+    public void undoWhenPrevious() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = getStore();
+        URI[] uris = getURIs();
+        InputStream[] streams = getStreams();
+        Document[] docs = getDocs();
+
+        store.putDocument(streams[4], uris[0], DocumentFormat.TXT);
+        store.undo();
+        testDocumentEquality(docs[0], store.getDocument(uris[0]));
+    }
+
+    // same as previous, but then also undoing the previous document (using the URI, so I don't have to change the test too much)
+    @Test
+    public void undoTwiceWhenPrevious() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = getStore();
+        URI[] uris = getURIs();
+        InputStream[] streams = getStreams();
+
+        store.putDocument(streams[4], uris[0], DocumentFormat.TXT);
+        store.undo();
+        store.undo(uris[0]);
+        assertNull(store.getDocument(uris[0]));
+    }
+
+    // undoing a URI when that is the only one in the HashTable
+    @Test
+    public void undoURIWorksFirst() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = new DocumentStoreImpl();
+        byte[] bytes = {(byte) 0};
+        InputStream stream = new ByteArrayInputStream(bytes);
+        URI uri = new URI("http://java.sun.com/index.html");
+        store.putDocument(stream, uri, DocumentFormat.BINARY);
+        store.undo(uri);
+        assertNull(store.getDocument(uri));
+    }
+
+    // undoing a URI multiple times
+    @Test
+    public void undoURITwiceWhenPrevious() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = getStore();
+        URI[] uris = getURIs();
+        InputStream[] streams = getStreams();
+
+        store.putDocument(streams[4], uris[1], DocumentFormat.TXT);
+        store.undo(uris[1]);
+        store.undo(uris[1]);
+        assertNull(store.getDocument(uris[1]));
+    }
+
+    // undo URI when previous
+    @Test
+    public void undoURIWhenPrevious() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = getStore();
+        URI[] uris = getURIs();
+        InputStream[] streams = getStreams();
+        Document[] docs = getDocs();
+
+        store.putDocument(streams[4], uris[0], DocumentFormat.TXT);
+        store.undo(uris[0]);
+        testDocumentEquality(docs[0], store.getDocument(uris[0]));
+    }
+
+    // undoing a URI when there are other documents above it
+    @Test
+    public void undoURIWhenBuried() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = getStore();
+        URI[] uris = getURIs();
+
+        store.undo(uris[2]);
+        assertNull(store.getDocument(uris[2]));
+    }
+
+    // test that both undos work with deleteDocument as well
+    @Test
+    public void undoWorksDelete() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = getStore();
+        URI[] uris = getURIs();
+        Document[] docs = getDocs();
+
+        store.deleteDocument(uris[0]);
+        store.undo(uris[0]);
+        testDocumentEquality(docs[0], store.getDocument(uris[0]));
+    }
+
+    // check that if you have a null delete and another command below it, the second command isn't undone
+    // until the first one is
+    @Test
+    public void undoDeleteNullObstructs() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = new DocumentStoreImpl();
+        InputStream[] streams = getStreams();
+        URI[] uris = getURIs();
+        Document[] docs = getDocs();
+        store.putDocument(streams[0], uris[0], DocumentFormat.TXT);
+        store.deleteDocument(uris[1]);
+        store.undo();
+        testDocumentEquality(docs[0], store.getDocument(uris[0]));
+        store.undo();
+        assertNull(store.getDocument(uris[0]));
+    }
+
+    // undo throws ISE in both forms if there are no commands
+    @Test
+    public void undoEmptyISE() throws URISyntaxException {
+        DocumentStore store = new DocumentStoreImpl();
+        URI[] uris = getURIs();
+        assertThrows(IllegalStateException.class, () -> store.undo());
+        assertThrows(IllegalStateException.class, () -> store.undo(uris[0]));
+    }
+
+    // undo throws ISE in both forms if there was a command but it was already undone
+    @Test
+    public void undoEmptyISELater() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = new DocumentStoreImpl();
+        byte[] bytes = {(byte) 0};
+        InputStream stream = new ByteArrayInputStream(bytes);
+        URI uri = new URI("http://java.sun.com/index.html");
+        store.putDocument(stream, uri, DocumentFormat.BINARY);
+        store.undo();
+        assertThrows(IllegalStateException.class, () -> store.undo());
+        assertThrows(IllegalStateException.class, () -> store.undo(uri));
+    }
+
+    // undo URI throws ISE when there are commands, but not for this URI
+    @Test
+    public void undoURIWrongDocISE() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = new DocumentStoreImpl();
+        byte[] bytes = {(byte) 0};
+        InputStream stream = new ByteArrayInputStream(bytes);
+        URI[] uris = getURIs();
+        store.putDocument(stream, uris[0], DocumentFormat.BINARY);
+        assertThrows(IllegalStateException.class, () -> store.undo(uris[1]));
+    }
+
+    // testing that stack still works even after an ISE is thrown
+    @Test
+    public void undoURIWrongDocISERecovery() throws URISyntaxException, IOException, IllegalStateException {
+        DocumentStore store = new DocumentStoreImpl();
+        byte[] bytes = {(byte) 0};
+        InputStream stream = new ByteArrayInputStream(bytes);
+        URI[] uris = getURIs();
+        Document[] docs = getDocs();
+        store.putDocument(stream, uris[0], DocumentFormat.TXT);
+        store.deleteDocument(uris[0]);
+        try {
+            store.undo(uris[1]);
+        } catch (IllegalStateException e) {
+            // nothing happens here
+        }
+        assertNull(store.getDocument(uris[1]));
+        store.undo();
+        testDocumentEquality(docs[0], store.getDocument(uris[0]));
     }
 }
