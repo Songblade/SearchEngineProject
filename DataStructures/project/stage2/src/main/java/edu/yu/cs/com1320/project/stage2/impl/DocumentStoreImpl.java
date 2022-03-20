@@ -29,9 +29,6 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public int putDocument(InputStream input, URI uri, DocumentFormat format) throws IOException {
-        // to anyone reading this, this is not a monster method, because it is a large percentage
-        // whitespace and comments to structure and explain it
-        // I counted 27-28 lines of actual code, include single "}"s, when the limit is 30
         if (uri == null) {
             throw new IllegalArgumentException("URI is null");
         }
