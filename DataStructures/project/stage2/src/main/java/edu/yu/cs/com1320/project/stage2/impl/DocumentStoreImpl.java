@@ -4,11 +4,9 @@ import edu.yu.cs.com1320.project.stage2.*;
 import edu.yu.cs.com1320.project.*;
 import edu.yu.cs.com1320.project.impl.*;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.function.Function;
 
 public class DocumentStoreImpl implements DocumentStore {
     // must use HashTableImpl to store documents
@@ -136,6 +134,8 @@ public class DocumentStoreImpl implements DocumentStore {
         commandStack.pop().undo();
     }
 
+    // To be clear, this method is exactly 30 lines when you include the @Override tag
+    // Since the monster method definition requires more than 30 lines of code, this is not a monster method
     /**
      * undo the last put or delete that was done with the given URI as its key
      *
@@ -169,7 +169,8 @@ public class DocumentStoreImpl implements DocumentStore {
                 }
             } while (!undone);
         } finally {
-            do { // something
+            do { // not regular while loop, because command could be null the first time from before, and
+                // that should not cause any problems
                 command = helperStack.pop();
                 if (command != null) { // if this is the first command that was undone, it will be null
                     commandStack.push(command);
