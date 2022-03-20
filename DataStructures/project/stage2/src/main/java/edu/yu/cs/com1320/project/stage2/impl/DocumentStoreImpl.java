@@ -140,7 +140,7 @@ public class DocumentStoreImpl implements DocumentStore {
     @Override
     public void undo(URI uri) throws IllegalStateException {
         if (commandStack.peek() == null) {
-            throw new IllegalStateException("No commands with URI " + uri + "to undo");
+            throw new IllegalStateException("No commands to undo");
         }
         Stack<Command> helperStack = new StackImpl<>(); // to put stuff on
         // I go through each command on the stack and examine it
