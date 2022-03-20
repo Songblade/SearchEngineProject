@@ -134,8 +134,6 @@ public class DocumentStoreImpl implements DocumentStore {
         commandStack.pop().undo();
     }
 
-    // To be clear, this method is exactly 30 lines when you include the @Override tag
-    // Since the monster method definition requires more than 30 lines of code, this is not a monster method
     /**
      * undo the last put or delete that was done with the given URI as its key
      *
@@ -169,14 +167,20 @@ public class DocumentStoreImpl implements DocumentStore {
                 }
             } while (!undone);
         } finally {
-            do { // not regular while loop, because command could be null the first time from before, and
-                // that should not cause any problems
-                command = helperStack.pop();
-                if (command != null) { // if this is the first command that was undone, it will be null
-                    commandStack.push(command);
-                }
-            } while (command != null);
+            restackStack(helperStack);
         }
 
+    }
+
+    // this method is called at the end of undo(URI) to put everything back on the stack
+    private void restackStack(Stack<Command> helperStack) {
+        Command command;
+        do { // not regular while loop, because command could be null the first time from before, and
+            // that should not cause any problems
+            command = helperStack.pop();
+            if (command != null) { // if this is the first command that was undone, it will be null
+                commandStack.push(command);
+            }
+        } while (command != null);
     }
 }

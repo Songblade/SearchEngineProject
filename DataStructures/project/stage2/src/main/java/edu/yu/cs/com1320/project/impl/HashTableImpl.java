@@ -63,35 +63,49 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
         if (k == null) { // this was what Piazza said to do, though I don't think it mattered much
             return null;
         }
-        int hashValue = hashFunction(k);
-        ChainLink link = table[hashValue]; // getting the right link
+        ChainLink link = table[hashFunction(k)]; // getting the right link
         ChainLink previousLink = null; // Has the link before this one, so no problems if
         // I go through the links until I find the right one or we run out of links
         while (link != null) {
             if (k.equals(link.k)) {
-                Value previous = (Value) link.v;
-                if (v != null) {
-                    link.v = v;
-                } else {
-                    // I was told that I now need to actually remove links from the hashtable instead of just giving them
-                    // a null value
-                    if (previousLink == null) {
-                        table[hashValue] = null;
-                    } else {
-                        previousLink.nextLink = link.nextLink;
-                    }
-                    contentCount--; // Since it is no longer taking up space
-                }
-                return previous;
+                return replaceOldValueWithNew(k, v, link, previousLink);
             }
             previousLink = link;
             link = link.nextLink;
         }
         // I don't want to add a new link with a null value
-        if (v == null) {
+        if (v == null) { // if the key is not in the table but the value is also null, so it is a bad delete
             return null;
         }
         // if we don't find the key, because link == null, we add a new link to the end
+        addNewLink(k, v, previousLink);
+        return null; // because we didn't replace anything
+    }
+
+    // I made this a private method so I could stop put() from being a monster method
+    // It is called if we find a link with the same key during put(), and we replace the old value with the new one, or if the new value is null,
+        // we delete the link
+    private Value replaceOldValueWithNew(Key k, Value v, ChainLink link, ChainLink previousLink) {
+        int hashValue = hashFunction(k);
+        Value previous = (Value) link.v;
+        if (v != null) {
+            link.v = v;
+        } else {
+            // I was told that I now need to actually remove links from the hashtable instead of just giving them
+            // a null value
+            if (previousLink == null) {
+                table[hashValue] = null;
+            } else {
+                previousLink.nextLink = link.nextLink;
+            }
+            contentCount--; // Since it is no longer taking up space
+        }
+        return previous;
+    }
+
+    // adds a new link with Key k and Value v at the end of a predetermined previous link
+    private void addNewLink(Key k, Value v, ChainLink previousLink) {
+        int hashValue = hashFunction(k);
         ChainLink newLink = new ChainLink(k, v);
         if (previousLink != null) {
             previousLink.nextLink = newLink;
@@ -102,7 +116,6 @@ public class HashTableImpl<Key, Value> implements HashTable<Key, Value> {
         if (contentCount > 0.75 * table.length) { // the recommended threshold
             resizeArray();
         }
-        return null; // because we didn't replace anything
     }
 
     private void resizeArray() {
