@@ -350,10 +350,14 @@ public class DocumentStoreTest {
         store.deleteDocument(uris[0]);
         store.undo(uris[0]);
         testDocumentEquality(docs[0], store.getDocument(uris[0]));
+
+        store.deleteDocument(uris[5]);
+        store.undo();
+        testDocumentEquality(docs[5], store.getDocument(uris[5]));
     }
 
     // check that if you have a null delete and another command below it, the second command isn't undone
-    // until the first one is
+        // until the first one is
     @Test
     public void undoDeleteNullObstructs() throws URISyntaxException, IOException, IllegalStateException {
         DocumentStore store = new DocumentStoreImpl();
