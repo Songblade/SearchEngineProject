@@ -1,9 +1,10 @@
-package edu.yu.cs.com1320.project.stage2.impl;
+package edu.yu.cs.com1320.project.stage3.impl;
 
-import edu.yu.cs.com1320.project.stage2.Document;
+import edu.yu.cs.com1320.project.stage3.Document;
 
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Set;
 
 public class DocumentImpl implements Document {
 
@@ -71,6 +72,25 @@ public class DocumentImpl implements Document {
     @Override
     public URI getKey() {
         return uri;
+    }
+
+    /**
+     * how many times does the given word appear in the document?
+     *
+     * @param word
+     * @return the number of times the given words appears in the document. If it's a binary document, return 0.
+     */
+    @Override
+    public int wordCount(String word) {
+        return 0;
+    }
+
+    /**
+     * @return all the words that appear in the document
+     */
+    @Override
+    public Set<String> getWords() {
+        return null;
     }
 
     @Override

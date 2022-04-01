@@ -8,7 +8,7 @@ import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import edu.yu.cs.com1320.project.stage2.impl.DocumentImpl;
+import edu.yu.cs.com1320.project.stage3.impl.DocumentImpl;
 import org.junit.jupiter.api.Test;
 
 public class DocumentAPITest {

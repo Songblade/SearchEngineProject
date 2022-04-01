@@ -8,10 +8,10 @@ import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import edu.yu.cs.com1320.project.stage2.impl.DocumentStoreImpl;
+import edu.yu.cs.com1320.project.stage3.impl.DocumentStoreImpl;
 import org.junit.jupiter.api.Test;
 
-import edu.yu.cs.com1320.project.stage2.DocumentStore.DocumentFormat;
+import edu.yu.cs.com1320.project.stage3.DocumentStore.DocumentFormat;
 
 public class DocumentStoreAPITest {
 

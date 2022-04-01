@@ -1,12 +1,14 @@
-package edu.yu.cs.com1320.project.stage2.impl;
+package edu.yu.cs.com1320.project.stage3.impl;
 
-import edu.yu.cs.com1320.project.stage2.*;
+import edu.yu.cs.com1320.project.stage3.*;
 import edu.yu.cs.com1320.project.*;
 import edu.yu.cs.com1320.project.impl.*;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.List;
+import java.util.Set;
 
 public class DocumentStoreImpl implements DocumentStore {
     // must use HashTableImpl to store documents
@@ -167,6 +169,55 @@ public class DocumentStoreImpl implements DocumentStore {
             restackStack(helperStack);
         }
 
+    }
+
+    /**
+     * Retrieve all documents whose text contains the given keyword.
+     * Documents are returned in sorted, descending order, sorted by the number of times the keyword appears in the document.
+     * Search is CASE INSENSITIVE.
+     *
+     * @param keyword
+     * @return a List of the matches. If there are no matches, return an empty list.
+     */
+    @Override
+    public List<Document> search(String keyword) {
+        return null;
+    }
+
+    /**
+     * Retrieve all documents whose text starts with the given prefix
+     * Documents are returned in sorted, descending order, sorted by the number of times the prefix appears in the document.
+     * Search is CASE INSENSITIVE.
+     *
+     * @param keywordPrefix
+     * @return a List of the matches. If there are no matches, return an empty list.
+     */
+    @Override
+    public List<Document> searchByPrefix(String keywordPrefix) {
+        return null;
+    }
+
+    /**
+     * Completely remove any trace of any document which contains the given keyword
+     *
+     * @param keyword
+     * @return a Set of URIs of the documents that were deleted.
+     */
+    @Override
+    public Set<URI> deleteAll(String keyword) {
+        return null;
+    }
+
+    /**
+     * Completely remove any trace of any document which contains a word that has the given prefix
+     * Search is CASE INSENSITIVE.
+     *
+     * @param keywordPrefix
+     * @return a Set of URIs of the documents that were deleted.
+     */
+    @Override
+    public Set<URI> deleteAllWithPrefix(String keywordPrefix) {
+        return null;
     }
 
     // this method is called at the end of undo(URI) to put everything back on the stack
