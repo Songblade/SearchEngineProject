@@ -13,7 +13,7 @@ import java.util.Set;
 public class DocumentStoreImpl implements DocumentStore {
     // must use HashTableImpl to store documents
     private HashTable<URI, Document> table;
-    private Stack<Command> commandStack;
+    private Stack<Undoable> commandStack;
 
     //This shouldn't do much, just set up the HashTable
     public DocumentStoreImpl() {
@@ -51,7 +51,7 @@ public class DocumentStoreImpl implements DocumentStore {
         // this adds the appropriate command to the command stack, along with saying what to add back
 
         Document previousDoc = table.get(uri);
-        commandStack.push(new Command(uri, (uri1) -> {
+        commandStack.push(new GenericCommand<URI>(uri, (uri1) -> {
             // if previousDoc is null, HashTable will delete it for me
             table.put(uri, previousDoc);
             return true;
@@ -104,7 +104,7 @@ public class DocumentStoreImpl implements DocumentStore {
             return false; // not deleting anything, because nothing to delete
         }
         Document previousDoc = table.get(uri);
-        commandStack.push(new Command(uri, (uri1) -> {
+        commandStack.push(new GenericCommand<URI>(uri, (uri1) -> {
             // if previousDoc is null, HashTable will delete it for me
             table.put(uri, previousDoc);
             return true;
@@ -144,21 +144,21 @@ public class DocumentStoreImpl implements DocumentStore {
         if (commandStack.peek() == null) {
             throw new IllegalStateException("No commands to undo");
         }
-        Stack<Command> helperStack = new StackImpl<>(); // to put stuff on
+        Stack<Undoable> helperStack = new StackImpl<>(); // to put stuff on
         // I go through each command on the stack and examine it
         // if it is not the command I am looking for, I put it on helperStack
         // if it is the command I am looking for, I activate it
         // if I never find the command, I throw an ISE
         // After activating it or before leaving with the ISE, I put all the stuff from the helperStack back on the main stack
-        Command command;
+        GenericCommand<URI> command;
         boolean undone = false;
         try {
             do { // I don't need a do-while, a regular while would do, but I ended up with this and see no problems
-                command = commandStack.pop();
+                command = (GenericCommand<URI>) commandStack.pop();
                 if (command == null) {
                     throw new IllegalStateException("No commands with the uri \"" + uri + "\" to be undone");
                 }
-                if (command.getUri().equals(uri)) { // if we found our command
+                if (command.getTarget().equals(uri)) { // if we found our command
                     command.undo();
                     undone = true;
                 } else { // if this is a dud that is not getting undone
@@ -221,8 +221,8 @@ public class DocumentStoreImpl implements DocumentStore {
     }
 
     // this method is called at the end of undo(URI) to put everything back on the stack
-    private void restackStack(Stack<Command> helperStack) {
-        Command command;
+    private void restackStack(Stack<Undoable> helperStack) {
+        Undoable command;
         do { // not regular while loop, because command could be null the first time from before, and
             // that should not cause any problems
             command = helperStack.pop();
