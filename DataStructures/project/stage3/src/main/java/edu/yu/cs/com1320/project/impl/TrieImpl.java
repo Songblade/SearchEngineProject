@@ -31,7 +31,13 @@ public class TrieImpl<Value> implements Trie<Value> {
      */
     @Override
     public void put(String key, Value val) {
+        if (val == null) {
+            throw new IllegalArgumentException("Value is null");
+        }
         String newKey = cleanKey(key);
+        if (newKey.isEmpty()) {
+            return;
+        }
         put(this.root, newKey, val);
     }
 
@@ -58,6 +64,9 @@ public class TrieImpl<Value> implements Trie<Value> {
 
     // this method turns the key lowercase and gets rid of any symbols
     private String cleanKey(String key) {
+        if (key == null) {
+            throw new IllegalArgumentException("Key is null");
+        }
         String newKey = "";
         // the following loop makes sure the key only contains alphanumerics
         for (int i = 0; i < key.length(); i++) {
@@ -97,7 +106,13 @@ public class TrieImpl<Value> implements Trie<Value> {
      */
     @Override
     public List<Value> getAllSorted(String key, Comparator<Value> comparator) {
+        if (comparator == null) {
+            throw new IllegalArgumentException("Comparator is null");
+        }
         String cleanedKey = cleanKey(key);
+        if (cleanedKey.isEmpty()) {
+            return new ArrayList<>();
+        }
         Node<Value> node = this.get(this.root, cleanedKey);
         if (node == null) {
             return new ArrayList<>();
@@ -138,7 +153,13 @@ public class TrieImpl<Value> implements Trie<Value> {
      */
     @Override
     public List<Value> getAllWithPrefixSorted(String prefix, Comparator<Value> comparator) {
+        if (comparator == null) {
+            throw new IllegalArgumentException("Comparator is null");
+        }
         String cleanedPrefix = cleanKey(prefix);
+        if (cleanedPrefix.isEmpty()) {
+            return new ArrayList<>();
+        }
         Node<Value> prefixNode = get(root, cleanedPrefix);
         if (prefixNode == null) {
             return new ArrayList<>();
@@ -177,7 +198,72 @@ public class TrieImpl<Value> implements Trie<Value> {
      */
     @Override
     public Set<Value> deleteAllWithPrefix(String prefix) {
-        return null;
+        String cleanedPrefix = cleanKey(prefix);
+        if (cleanedPrefix.isEmpty()) {
+            return new HashSet<>();
+        }
+        // first I need to get the prefix
+        Node<Value> prefixNode = get(root, cleanedPrefix);
+        // then I need to get a set of values that are in and below that prefix
+        if (prefixNode == null) {
+            return new HashSet<>(); // if the prefix node isn't there, there is nothing to delete
+        }
+        Set<Value> deleted = getPrefixSet(prefixNode);
+        // then I need to delete the prefix
+        deleteNode(root, cleanedPrefix);
+        // then I need to return the values
+        return deleted;
+    }
+
+    // deletes a node and all of its children, and maybe parents if they don't have any other children
+    private boolean deleteNode(Node<Value> currentNode, String key) {
+        //proceed to the next node in the chain of nodes that forms the desired key
+        char c = key.charAt(0);
+        key = key.substring(1);
+        int cValue = getArrayValue(c); // the value of c's array slot
+        // if we've reached the last node in the key, delete the node
+        if (key.length() == 1) {
+            currentNode.links[cValue] = null; // deleting the value
+            return false; // time to go up, we return false since we may or may not delete its parent also
+        }
+        // next link is null, means what we are deleting is already deleted, time to go up
+        if (currentNode.links[cValue] == null) {
+            return true; // The only way possible to have a null value is if there is another brother of the node
+                // that does have children
+        }
+        //proceed to the next node in the chain of nodes that forms the desired key
+        boolean knownChildren = this.deleteNode(currentNode.links[cValue], key);
+        // now we need to make sure that if there aren't any other children, we delete the parent node as well
+        // if knownChildren is false, we check if it has other children, and if it does, we delete them
+        // if it doesn't, we return true
+        // if we got true, we return true
+        if (knownChildren) {
+            return true;
+        } else {
+            int numOfChildren = childNumber(currentNode);
+            if (numOfChildren > 1) {
+                // we can't delete this node or any others, because there are other children
+                return true;
+            } else if (numOfChildren == 1) {
+                // if we went through the entire loop without finding any other non-null children, they must not exist
+                // so we can delete this value too, and tell the parent to check the children also
+                currentNode.links[cValue] = null;
+                return false;
+            } else {
+                throw new IllegalStateException("Somehow, you have a parent with no children");
+            }
+        }
+    }
+
+    private int childNumber(Node<Value> node) {
+        int childNumber = 0;
+        // I can't use a for-each loop, because I can't delete a node in the middle of it
+        for (int child = 0; child < alphabetSize; child++) {
+            if (node.links[child] != null) {
+                childNumber++;
+            }
+        }
+        return childNumber;
     }
 
     /**
@@ -188,7 +274,25 @@ public class TrieImpl<Value> implements Trie<Value> {
      */
     @Override
     public Set<Value> deleteAll(String key) {
-        return null;
+        String cleanedKey = cleanKey(key);
+        if (cleanedKey.isEmpty()) {
+            return new HashSet<>();
+        }
+        // first, we get the node
+        Node<Value> node = get(root, cleanedKey);
+        if (node == null) {
+            return new HashSet<>(); // if the prefix node isn't there, there is nothing to delete
+        }
+        // then, we check if it has children
+        if (childNumber(node) == 0) {
+            // if it has no children, we call the deleteAllWithPrefix method and return that, so that it
+                // can deal with the going up and deleting
+            return deleteAllWithPrefix(cleanedKey);
+        }
+        // if it has children, we don't want to delete the node, so we extract its values and delete them
+        Set<Value> deleted = node.values;
+        node.values = new HashSet<>(); // deletes the values
+        return deleted;
     }
 
     /**
@@ -200,6 +304,32 @@ public class TrieImpl<Value> implements Trie<Value> {
      */
     @Override
     public Value delete(String key, Value val) {
-        return null;
+        // first, we clean the key and get the node
+        String cleanedKey = cleanKey(key);
+        if (cleanedKey.isEmpty()) {
+            return null;
+        }
+        if (val == null) {
+            throw new IllegalArgumentException("Value is null");
+        }
+        Node<Value> node = get(root, cleanedKey);
+        // if the value isn't there, we return null
+        if (node == null || !node.values.contains(val)) {
+            return null; // if the prefix node isn't there, there is nothing to delete
+        }
+        // if this is the only value in the node, we return the value from the set from deleteAll
+        if (node.values.size() == 1) {
+            Set<Value> deleted = deleteAll(cleanedKey);
+            if (deleted.size() != 1) {
+                throw new IllegalStateException("deleted is wrong size");
+            }
+            if (!deleted.contains(val)) {
+                throw new IllegalStateException("deleted doesn't contain value");
+            }
+            return val;
+        }
+        // if there are other values, we delete the value and return it
+        node.values.remove(val);
+        return val;
     }
 }

@@ -3,14 +3,14 @@ package edu.yu.cs.com1320.project.stage3.impl;
 import edu.yu.cs.com1320.project.stage3.Document;
 
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Set;
+import java.util.*;
 
 public class DocumentImpl implements Document {
 
     private URI uri; // the URI of the document
     private String text; // the text of the document, null if not applicable
     private byte[] binaryData; // the data of the document, null if not applicable
+    private Map<String, Integer> wordCount;
 
     // constructor that uses text
     public DocumentImpl(URI uri, String text) {
@@ -23,6 +23,37 @@ public class DocumentImpl implements Document {
         }
         this.uri = uri;
         this.text = text;
+        generateWordCount();
+    }
+
+    // creates the hashmap that contains the wordcount
+    private void generateWordCount() {
+        wordCount = new HashMap<>();
+        Scanner textParser = new Scanner(text);
+        while(textParser.hasNext()) {
+            String word = cleanWord(textParser.next());
+            if (word.length() > 0) { // if the word isn't just symbols
+                wordCount.put(word, 1 + wordCount.getOrDefault(word, 0));
+                // this should add 1 to the value, or put 1 + 0 if it isn't there yet
+            }
+        }
+    }
+
+    // this method makes sure a word only contains alphanumerics
+    private String cleanWord(String word) {
+        String newWord = "";
+        for (int i = 0; i < word.length(); i++) {
+            if (Character.getType(word.charAt(i)) == Character.UPPERCASE_LETTER) {
+                newWord += (Character.toLowerCase(word.charAt(i)));
+                // so that it will be lowercase
+            }
+            if (Character.getType(word.charAt(i)) == Character.LOWERCASE_LETTER ||
+                    Character.getType(word.charAt(i)) == Character.DECIMAL_DIGIT_NUMBER) {
+                newWord += (Character.toLowerCase(word.charAt(i)));
+            }
+            // if it isn't a letter or a number, it isn't added
+        }
+        return newWord;
     }
 
     public DocumentImpl(URI uri, byte[] binaryData) {
@@ -35,6 +66,7 @@ public class DocumentImpl implements Document {
         }
         this.uri = uri;
         this.binaryData = Arrays.copyOf(binaryData, binaryData.length);
+        this.wordCount = new HashMap<>();
     }
 
     // if the URI being inputted is null or empty, this will throw errors for my constructors
@@ -82,7 +114,9 @@ public class DocumentImpl implements Document {
      */
     @Override
     public int wordCount(String word) {
-        return 0;
+        return wordCount.getOrDefault(cleanWord(word), 0);
+        // this should return the value, if there is one, or 0, if there isn't one
+        // since binary documents initialize an empty list, it should already work there
     }
 
     /**
@@ -90,7 +124,7 @@ public class DocumentImpl implements Document {
      */
     @Override
     public Set<String> getWords() {
-        return null;
+        return wordCount.keySet();
     }
 
     @Override
@@ -116,7 +150,7 @@ public class DocumentImpl implements Document {
         return this.hashCode() == other.hashCode();
     }
 
-    /*
+/*
     //make sure you get rid of this, or you will fail
     // I am leaving this code here, in case I ever want the print again
     @Override
@@ -133,6 +167,6 @@ public class DocumentImpl implements Document {
         }
         return value;
     }
-     */
+*/
 
 }

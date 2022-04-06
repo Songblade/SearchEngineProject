@@ -7,6 +7,7 @@ import edu.yu.cs.com1320.project.impl.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -14,11 +15,13 @@ public class DocumentStoreImpl implements DocumentStore {
     // must use HashTableImpl to store documents
     private HashTable<URI, Document> table;
     private Stack<Undoable> commandStack;
+    private Trie<Document> searchTrie;
 
     //This shouldn't do much, just set up the HashTable
     public DocumentStoreImpl() {
         table = new HashTableImpl<>();
         commandStack = new StackImpl<>();
+        searchTrie = new TrieImpl<>();
     }
 
     /**
@@ -51,7 +54,7 @@ public class DocumentStoreImpl implements DocumentStore {
         // this adds the appropriate command to the command stack, along with saying what to add back
 
         Document previousDoc = table.get(uri);
-        commandStack.push(new GenericCommand<URI>(uri, (uri1) -> {
+        commandStack.push(new GenericCommand<>(uri, (uri1) -> {
             // if previousDoc is null, HashTable will delete it for me
             table.put(uri, previousDoc);
             return true;
@@ -63,7 +66,9 @@ public class DocumentStoreImpl implements DocumentStore {
         }
 
         // everything from here on in should only happen if I have a valid document
-        table.put(uri, readDataToDocument(input, uri, format));
+        Document doc = readDataToDocument(input, uri, format);
+        table.put(uri, doc);
+        putWordsInTrie(doc);
         return oldHash;
     }
 
@@ -82,6 +87,12 @@ public class DocumentStoreImpl implements DocumentStore {
             return new DocumentImpl(uri, new String(data));
         } else { // if the format is binary
             return new DocumentImpl(uri, data);
+        }
+    }
+
+    private void putWordsInTrie(Document doc) {
+        for (String word : doc.getWords()) {
+            searchTrie.put(word, doc);
         }
     }
 
@@ -104,7 +115,7 @@ public class DocumentStoreImpl implements DocumentStore {
             return false; // not deleting anything, because nothing to delete
         }
         Document previousDoc = table.get(uri);
-        commandStack.push(new GenericCommand<URI>(uri, (uri1) -> {
+        commandStack.push(new GenericCommand<>(uri, (uri1) -> {
             // if previousDoc is null, HashTable will delete it for me
             table.put(uri, previousDoc);
             return true;
@@ -171,6 +182,18 @@ public class DocumentStoreImpl implements DocumentStore {
 
     }
 
+    // this method is called at the end of undo(URI) to put everything back on the stack
+    private void restackStack(Stack<Undoable> helperStack) {
+        Undoable command;
+        do { // not regular while loop, because command could be null the first time from before, and
+            // that should not cause any problems
+            command = helperStack.pop();
+            if (command != null) { // if this is the first command that was undone, it will be null
+                commandStack.push(command);
+            }
+        } while (command != null);
+    }
+
     /**
      * Retrieve all documents whose text contains the given keyword.
      * Documents are returned in sorted, descending order, sorted by the number of times the keyword appears in the document.
@@ -181,7 +204,7 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public List<Document> search(String keyword) {
-        return null;
+        return searchTrie.getAllSorted(keyword, new DocComparator(keyword));
     }
 
     /**
@@ -220,15 +243,63 @@ public class DocumentStoreImpl implements DocumentStore {
         return null;
     }
 
-    // this method is called at the end of undo(URI) to put everything back on the stack
-    private void restackStack(Stack<Undoable> helperStack) {
-        Undoable command;
-        do { // not regular while loop, because command could be null the first time from before, and
-            // that should not cause any problems
-            command = helperStack.pop();
-            if (command != null) { // if this is the first command that was undone, it will be null
-                commandStack.push(command);
-            }
-        } while (command != null);
+}
+
+class DocComparator implements Comparator<Document> {
+
+    private String keyWord; // this is the word that we compare by
+
+    public DocComparator(String keyWord) {
+        this.keyWord = keyWord;
+    }
+
+    /**
+     * Compares its two arguments for order.  Returns a negative integer,
+     * zero, or a positive integer as the first argument is less than, equal
+     * to, or greater than the second.
+     *
+     * The implementor must ensure that {@code sgn(compare(x, y)) ==
+     * -sgn(compare(y, x))} for all {@code x} and {@code y}.  (This
+     * implies that {@code compare(x, y)} must throw an exception if and only
+     * if {@code compare(y, x)} throws an exception.)
+     *
+     * The implementor must also ensure that the relation is transitive:
+     * {@code ((compare(x, y)>0) && (compare(y, z)>0))} implies
+     * {@code compare(x, z)>0}.
+     *
+     * Finally, the implementor must ensure that {@code compare(x, y)==0}
+     * implies that {@code sgn(compare(x, z))==sgn(compare(y, z))} for all
+     * {@code z}.
+     *
+     * It is generally the case, but <i>not</i> strictly required that
+     * {@code (compare(x, y)==0) == (x.equals(y))}.  Generally speaking,
+     * any comparator that violates this condition should clearly indicate
+     * this fact.  The recommended language is "Note: this comparator
+     * imposes orderings that are inconsistent with equals."
+     *
+     * In the foregoing description, the notation
+     * {@code sgn(}<i>expression</i>{@code )} designates the mathematical
+     * <i>signum</i> function, which is defined to return one of {@code -1},
+     * {@code 0}, or {@code 1} according to whether the value of
+     * <i>expression</i> is negative, zero, or positive, respectively.
+     *
+     * @param o1 the first object to be compared.
+     * @param o2 the second object to be compared.
+     * @return a negative integer, zero, or a positive integer as the
+     * first argument is less than, equal to, or greater than the
+     * second.
+     * @throws NullPointerException if an argument is null and this
+     *                              comparator does not permit null arguments
+     * @throws ClassCastException   if the arguments' types prevent them from
+     *                              being compared by this comparator.
+     */
+    @Override
+    public int compare(Document o1, Document o2) {
+        if (o1 == null || o2 == null) {
+            throw new NullPointerException();
+        }
+        // I think that normally, it should be the opposite, as this is saying that o1 is smaller than o2 when it is actually greater
+        // But this makes sense, because we want it in reverse order
+        return o2.wordCount(keyWord) - o1.wordCount(keyWord);
     }
 }

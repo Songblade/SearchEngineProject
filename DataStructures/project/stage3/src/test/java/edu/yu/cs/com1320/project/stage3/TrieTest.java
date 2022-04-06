@@ -7,10 +7,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import edu.yu.cs.com1320.project.impl.TrieImpl;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Comparator;
 
 public class TrieTest {
+
+    public TrieTest(){}
 
     // Tests for put:
     // Test that add works, even when add a whole bunch of words to a whole bunch of keys
@@ -116,7 +119,6 @@ public class TrieTest {
         trie.put("", 17);
         trie.put("__)(", 17);
         ArrayList<Integer> result = new ArrayList<>();
-        result.add(17);
         assertEquals(result, trie.getAllSorted("", Comparator.naturalOrder()));
     }
 
@@ -324,35 +326,253 @@ public class TrieTest {
 
     // Test makes sure suffixes actually deleted, and everything in this node
     @Test
-    public void deleteAllWithPrefixWorksNarrow() {
+    public void deleteAllWithPrefixWorks() {
         Trie<Integer> trie = new TrieImpl<>();
         trie.put("You", 17);
         trie.put("YouTube", 18);
         trie.put("YouTuber", 19);
+        trie.put("YouViewer", 20);
         trie.deleteAllWithPrefix("You");
         ArrayList<Integer> result = new ArrayList<>();
         assertEquals(result, trie.getAllWithPrefixSorted("You", Comparator.naturalOrder()));
     }
-    
+
     // Makes sure Set is returned containing everything that was deleted
+    @Test
+    public void deleteAllWithPrefixReturns() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("You", 17);
+        trie.put("YouTube", 18);
+        trie.put("YouTube", 19);
+        trie.put("YouViewer", 20);
+        HashSet<Integer> result = new HashSet<>();
+        result.add(17);
+        result.add(18);
+        result.add(19);
+        result.add(20);
+        assertEquals(result, trie.deleteAllWithPrefix("You"));
+    }
+
     // Makes sure empty set returned if nothing deleted
-    // Makes sure empty set returned if prefix isn't in tree
+    @Test
+    public void deleteAllWithPrefixReturnsEmpty() {
+        Trie<Integer> trie = new TrieImpl<>();
+        HashSet<Integer> result = new HashSet<>();
+        assertEquals(result, trie.deleteAllWithPrefix("They"));
+        trie.put("You", 17);
+        trie.put("YouTube", 18);
+        trie.put("YouTuber", 19);
+        trie.put("YouViewer", 20);
+        assertEquals(result, trie.deleteAllWithPrefix("They"));
+    }
+
     // Test that makes sure case-insensitive and ignores symbols
+    @Test
+    public void deleteAllWithPrefixIsClean() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("You!@#$%^&*()_+`~_+[]{}\\|;:'\"<>,.?/Tube", 17);
+        trie.put("You!Tuber!!", 18);
+        HashSet<Integer> result = new HashSet<>();
+        result.add(17);
+        result.add(18);
+        assertEquals(result, trie.deleteAllWithPrefix("you"));
+        assertEquals(new ArrayList<>(), trie.getAllWithPrefixSorted("You", Comparator.naturalOrder()));
+    }
+
+    // makes sure deleting "!" won't delete the entire trie
+    // Makes sure Set is returned containing everything that was deleted
+    @Test
+    public void deleteAllWithPrefixIgnoresSymbolWords() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("You", 17);
+        trie.put("YouTube", 18);
+        trie.put("YouTube", 19);
+        trie.put("YouViewer", 20);
+        trie.put("!@#$R%", 21);
+        ArrayList<Integer> result = new ArrayList<>();
+        result.add(17);
+        result.add(18);
+        result.add(19);
+        result.add(20);
+        assertEquals(new HashSet<>(), trie.deleteAllWithPrefix("!"));
+        assertEquals(result, trie.getAllWithPrefixSorted("Y", Comparator.naturalOrder()));
+    }
 
     // Tests for deleteAll:
     // Makes sure deletes all values
+    @Test
+    public void deleteAllDeletes() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("YouTube", 18);
+        trie.put("YouTube", 19);
+        trie.deleteAll("YouTube");
+        ArrayList<Integer> result = new ArrayList<>();
+        assertEquals(result, trie.getAllSorted("YouTube", Comparator.naturalOrder()));
+    }
+
     // Makes sure does NOT delete suffix values
+    @Test
+    public void deleteAllIgnoresSuffixes() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("You", 17);
+        trie.put("YouTube", 18);
+        trie.put("YouTube", 19);
+        trie.put("YouTuber", 20);
+        trie.deleteAll("YouTube");
+        ArrayList<Integer> result = new ArrayList<>();
+        result.add(17);
+        result.add(20);
+        assertEquals(result, trie.getAllWithPrefixSorted("You", Comparator.naturalOrder()));
+    }
+
+    // Makes sure can delete and then add again
+    @Test
+    public void deleteAllCanAddAgain() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("YouTube", 18);
+        trie.put("YouTube", 19);
+        trie.deleteAll("YouTube");
+        trie.put("YouTube", 18);
+        trie.put("YouTube", 20);
+        ArrayList<Integer> result = new ArrayList<>();
+        result.add(18);
+        result.add(20);
+        assertEquals(result, trie.getAllSorted("YouTube", Comparator.naturalOrder()));
+    }
+
     // Makes sure Set is returned containing everything that was deleted
+    @Test
+    public void deleteAllReturns() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("You", 17);
+        trie.put("YouTube", 18);
+        trie.put("YouTube", 19);
+        trie.put("YouViewer", 20);
+        HashSet<Integer> result = new HashSet<>();
+        result.add(18);
+        result.add(19);
+        assertEquals(result, trie.deleteAll("YouTube"));
+    }
+
     // Makes sure empty set returned if nothing deleted
     // Makes sure empty set returned if isn't in tree
+    @Test
+    public void deleteAllReturnsEmpty() {
+        Trie<Integer> trie = new TrieImpl<>();
+        HashSet<Integer> result = new HashSet<>();
+        assertEquals(result, trie.deleteAll("YouTube"));
+        trie.put("Thou", 17);
+        trie.put("You", 18);
+        assertEquals(result, trie.deleteAll("YouTube"));
+        trie.put("YouTuber", 19);
+        assertEquals(result, trie.deleteAll("YouTube"));
+    }
+
     // Test that makes sure case-insensitive and ignores symbols
+    // Test that makes sure case-insensitive and ignores symbols
+    @Test
+    public void deleteAllIsClean() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("You!@#$%^&*()_+`~_+[]{}\\|;:'\"<>,.?/Tube", 17);
+        trie.put("You!Tube!!", 18);
+        HashSet<Integer> result = new HashSet<>();
+        result.add(17);
+        result.add(18);
+        assertEquals(result, trie.deleteAll("youtube"));
+        assertEquals(new ArrayList<>(), trie.getAllSorted("YouTube", Comparator.naturalOrder()));
+    }
+
+    // Test that makes sure empty when deletes stuff from symbol words
+    @Test
+    public void deleteAllIgnoresSymbolWords() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("You", 17);
+        trie.put("YouTube", 18);
+        trie.put("YouTube", 19);
+        trie.put("YouViewer", 20);
+        trie.put("!@#$R%", 21);
+        assertEquals(new HashSet<>(), trie.deleteAll("!"));
+    }
 
     // Tests for delete:
     // Makes sure deletes the value
-    // Makes sure does not delete other values or suffix values
-    // Makes sure returns deleted value
-    // Makes sure returns null if nothing deleted, only suffixes, or not in tree
-    // Test that makes sure case-insensitive and ignores symbols
+    @Test
+    public void deleteDeletes() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("YouTube", 17);
+        trie.delete("YouTube", 17);
+        ArrayList<Integer> result = new ArrayList<>();
+        assertEquals(result, trie.getAllSorted("YouTube", Comparator.naturalOrder()));
+    }
 
+    // Makes sure does not delete other values or suffix values
+    @Test
+    public void deleteOnlyDeletesGivenValue() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("YouTube", 17);
+        trie.put("YouTube", 18);
+        trie.put("YouTuber", 19);
+        trie.put("You", 20);
+        trie.delete("YouTube", 17);
+        ArrayList<Integer> result = new ArrayList<>();
+        result.add(18);
+        assertEquals(result, trie.getAllSorted("YouTube", Comparator.naturalOrder()));
+        result = new ArrayList<>();
+        result.add(19);
+        assertEquals(result, trie.getAllSorted("YouTuber", Comparator.naturalOrder()));
+        result = new ArrayList<>();
+        result.add(20);
+        assertEquals(result, trie.getAllSorted("You", Comparator.naturalOrder()));
+    }
+
+    // Makes sure returns deleted value
+    @Test
+    public void deleteReturns() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("You", 17);
+        trie.put("YouTube", 18);
+        trie.put("YouTube", 19);
+        trie.put("YouViewer", 20);
+        Integer result = 18;
+        assertEquals(result, trie.delete("YouTube", 18));
+    }
+
+    // Makes sure returns null if nothing deleted, only suffixes, or not in tree
+    @Test
+    public void deleteReturnsNull() {
+        Trie<Integer> trie = new TrieImpl<>();
+        assertNull(trie.delete("YouTube", 18));
+        trie.put("You", 18);
+        trie.put("Thou", 18);
+        assertNull(trie.delete("YouTube", 18));
+        trie.put("YouTuber", 18);
+        assertNull(trie.delete("YouTube", 18));
+        trie.put("YouTube", 19);
+        assertNull(trie.delete("YouTube", 18));
+    }
+
+    // Test that makes sure case-insensitive and ignores symbols
+    @Test
+    public void deleteIsClean() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("You!@#$%^&*()_+`~_+[]{}\\|;:'\"<>,.?/Tube", 17);
+        trie.put("You!Tube!!", 18);
+        assertEquals(17, trie.delete("youtube", 17));
+        assertEquals(18, trie.delete("youtube", 18));
+        assertEquals(new ArrayList<>(), trie.getAllSorted("YouTube", Comparator.naturalOrder()));
+    }
+
+    // Test that makes sure empty when deletes stuff from symbol words
+    @Test
+    public void deleteIgnoresSymbolWords() {
+        Trie<Integer> trie = new TrieImpl<>();
+        trie.put("You", 17);
+        trie.put("YouTube", 18);
+        trie.put("YouTube", 19);
+        trie.put("YouViewer", 20);
+        trie.put("!@#$R%", 21);
+        assertNull(trie.delete("!", 21));
+    }
 
 }
+// don't forget to add tests for the delete methods to make sure they ignore words with no letters
