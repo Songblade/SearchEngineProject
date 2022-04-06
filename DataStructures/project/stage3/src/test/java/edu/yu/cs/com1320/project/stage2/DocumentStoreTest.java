@@ -435,7 +435,7 @@ public class DocumentStoreTest {
         words[1] = "All fear Big Tech. Their robots are about to overthrow us and replace us with tech minions with tech";
         words[2] = "How much tech could a techtech tech if a techtech could tech tech? ? Who cares.";
         words[3] = "The only thing we fear is Fear itself. The only thing Fear fears is your mom.";
-        words[4] = "Not only does this say tech- 3 times (some say technology is addictive) but it also includes techy 0s and other tech numbers :3";
+        words[4] = "Not only does this say <tech> 3 times (some say technology is addictive) but it also includes techy 0s and other tech numbers :3";
         words[5] = "Fear fear fear fear fear tech tech tech tech tech binary doesn't care";
         return words;
         // tech: 0 has 0, 1 has 3, 2 has 4, 3 has 0, 4 has 2, 5 is binary
@@ -554,18 +554,67 @@ public class DocumentStoreTest {
         assertEquals(result, store.search("?"));
     }
 
-    // tech: 0 has 0, 1 has 3, 2 has 4, 3 has 0, 4 has 2, 5 is binary (2, 1, [4])
-    // tech- (prefix): 0 has 1, 1 has 3, 2 has 6, 3 has 0, 4 has 4, 5 is binary (2, [4], 1, 0)
-    // fear: 0 has 0, 1 has 1, 2 has 0, 3 has 4, 4 has 0, 5 is binary (3, 1)
-
     // Tests for searchByPrefix
     // Make sure prefix works, and in descending order
-    // Makes sure new words appear in new saerches after things are added, and can add to the middle
+    // Makes sure ignores case and symbols
+    @Test
+    public void searchByPrefixWorksDescending() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        ArrayList<Document> result = new ArrayList<>();
+        result.add(docs[2]);
+        result.add(docs[4]);
+        result.add(docs[1]);
+        result.add(docs[0]);
+        assertEquals(result, store.searchByPrefix("tech"));
+    }
+
+    // Makes sure new words appear in new searches after things are added, and can add to the middle
+    @Test
+    public void searchByPrefixWorksAddLater() throws URISyntaxException, IOException {
+        DocumentStore store = halfStore();
+        Document[] docs = newDocs();
+        InputStream[] streams = newStreams();
+        URI[] uris = getURIs();
+        ArrayList<Document> result = new ArrayList<>();
+        result.add(docs[2]);
+        result.add(docs[1]);
+        result.add(docs[0]);
+        assertEquals(result, store.searchByPrefix("tech"));
+        store.putDocument(streams[4], uris[4], DocumentFormat.TXT);
+        result.add(1, docs[4]);
+        assertEquals(result, store.searchByPrefix("tech"));
+    }
+
     // Make sure can search different keywords for different results
+    @Test
+    public void searchByPrefixDifPrefix() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        ArrayList<Document> result = new ArrayList<>();
+        result.add(docs[2]);
+        result.add(docs[4]);
+        result.add(docs[3]);
+        result.add(docs[0]);
+        assertTrue(result.containsAll(store.searchByPrefix("I")));
+        assertTrue(store.searchByPrefix("I").containsAll(result));
+    }
+
     // Make sure empty list if no matches
     // Make sure empty list if only match is in binary
     // Makes sure empty list if symbol word, even if matches
-    // Makes sure ignores case and symbols
+    @Test
+    public void searchByPrefixReturnsEmpty() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        ArrayList<Document> result = new ArrayList<>();
+        assertEquals(result, store.searchByPrefix("Indianapolis"));
+        assertEquals(result, store.searchByPrefix("doesn't"));
+        assertEquals(result, store.searchByPrefix("?"));
+    }
+
+    // tech: 0 has 0, 1 has 3, 2 has 4, 3 has 0, 4 has 2, 5 is binary (2, 1, [4])
+    // tech- (prefix): 0 has 1, 1 has 3, 2 has 6, 3 has 0, 4 has 4, 5 is binary (2, [4], 1, 0)
+    // fear: 0 has 0, 1 has 1, 2 has 0, 3 has 4, 4 has 0, 5 is binary (3, 1)
 
     // Tests for deleteAll
     // Makes sure deletes all, but not things with prefix
@@ -592,5 +641,7 @@ public class DocumentStoreTest {
     // Tests for undo with deleteAllWithPrefix
     // Makes sure can undo deleteAllWithPrefix and undo each one
     // Makes sure can deleteAll, undo(URI), and the others will stay deleted
+
+    // make sure to add a test to make sure that search does not show a deleted document
 
 }

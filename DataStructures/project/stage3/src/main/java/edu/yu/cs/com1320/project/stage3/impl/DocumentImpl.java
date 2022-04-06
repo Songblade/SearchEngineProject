@@ -41,6 +41,9 @@ public class DocumentImpl implements Document {
 
     // this method makes sure a word only contains alphanumerics
     private String cleanWord(String word) {
+        if (word == null) { // this can only happen when the method is called by wordCount()
+            throw new IllegalArgumentException("Word is null");
+        }
         String newWord = "";
         for (int i = 0; i < word.length(); i++) {
             if (Character.getType(word.charAt(i)) == Character.UPPERCASE_LETTER) {
@@ -167,6 +170,7 @@ public class DocumentImpl implements Document {
         }
         return value;
     }
-*/
+    */
+
 
 }
