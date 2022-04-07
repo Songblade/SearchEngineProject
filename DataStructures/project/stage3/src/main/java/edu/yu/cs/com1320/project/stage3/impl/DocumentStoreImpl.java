@@ -51,22 +51,24 @@ public class DocumentStoreImpl implements DocumentStore {
         } else {
             oldHash = table.get(uri).hashCode();
         }
-        // this adds the appropriate command to the command stack, along with saying what to add back
-
-        Document previousDoc = table.get(uri);
-        commandStack.push(new GenericCommand<>(uri, (uri1) -> {
-            // if previousDoc is null, HashTable will delete it for me
-            table.put(uri, previousDoc);
-            return true;
-        }));
 
         if (input == null) { // deleting the document, if that is what was asked
-            table.put(uri, null);
+            deleteDocument(uri); // using this method, so that the undo will work properly
             return oldHash;
         }
 
         // everything from here on in should only happen if I have a valid document
         Document doc = readDataToDocument(input, uri, format);
+
+        Document previousDoc = table.get(uri);
+        commandStack.push(new GenericCommand<>(uri, (uri1) -> {
+            // if previousDoc is null, HashTable will delete it for me
+            removeDocFromTrie(doc);
+            table.put(uri, previousDoc);
+            putWordsInTrie(previousDoc);
+            return true;
+        }));
+
         table.put(uri, doc);
         putWordsInTrie(doc);
         return oldHash;
@@ -91,6 +93,9 @@ public class DocumentStoreImpl implements DocumentStore {
     }
 
     private void putWordsInTrie(Document doc) {
+        if (doc == null) {
+            return;
+        }
         for (String word : doc.getWords()) {
             searchTrie.put(word, doc);
         }
@@ -118,16 +123,27 @@ public class DocumentStoreImpl implements DocumentStore {
         commandStack.push(new GenericCommand<>(uri, (uri1) -> {
             // if previousDoc is null, HashTable will delete it for me
             table.put(uri, previousDoc);
+            putWordsInTrie(previousDoc);
             return true;
         }));
         // this has to be after adding the command to the stack, because it is still supposed to add a command
         // even if it does nothing
-        if (table.get(uri) == null) {
+        if (previousDoc == null) {
             return false;
         }
         // if there is something to delete
+        removeDocFromTrie(previousDoc);
         table.put(uri, null);
         return true;
+    }
+
+    private void removeDocFromTrie(Document doc) {
+        if (doc == null) {
+            return;
+        }
+        for (String word : doc.getWords()) {
+            searchTrie.delete(word, doc);
+        }
     }
 
     /**

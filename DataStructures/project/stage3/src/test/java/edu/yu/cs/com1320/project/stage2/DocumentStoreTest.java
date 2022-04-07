@@ -530,6 +530,51 @@ public class DocumentStoreTest {
         assertEquals(result, store.search("fear"));
     }
 
+    // Make sure if delete a document, it no longer returns in search
+    // Whether deleted regularly or with put(null)
+    @Test
+    public void searchIgnoresDeletedDocs() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        URI[] uris = getURIs();
+        ArrayList<Document> result = new ArrayList<>();
+        result.add(docs[2]);
+        result.add(docs[1]);
+        result.add(docs[4]);
+        assertEquals(result, store.search("tech"));
+        store.deleteDocument(uris[1]);
+        result.remove(docs[1]);
+        assertEquals(result, store.search("tech"));
+        store.putDocument(null, uris[2], DocumentFormat.TXT);
+        result.remove(docs[2]);
+        assertEquals(result, store.search("tech"));
+    }
+
+    // test can delete and undo and it will return in searches, whether deleteDoc or put(null)
+    @Test
+    public void searchSeesDeletedDocsUndone() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        URI[] uris = getURIs();
+        ArrayList<Document> result = new ArrayList<>();
+        result.add(docs[2]);
+        result.add(docs[1]);
+        result.add(docs[4]);
+        assertEquals(result, store.search("tech"));
+        store.deleteDocument(uris[1]);
+        result.remove(docs[1]);
+        assertEquals(result, store.search("tech"));
+        store.undo();
+        result.add(1, docs[1]);
+        assertEquals(result, store.search("tech"));
+        store.putDocument(null, uris[2], DocumentFormat.TXT);
+        result.remove(docs[2]);
+        assertEquals(result, store.search("tech"));
+        store.undo(uris[2]);
+        result.add(0, docs[2]);
+        assertEquals(result, store.search("tech"));
+    }
+
     // Make sure empty list if no matches
     @Test
     public void searchReturnsEmpty() throws URISyntaxException, IOException {
@@ -584,6 +629,7 @@ public class DocumentStoreTest {
         store.putDocument(streams[4], uris[4], DocumentFormat.TXT);
         result.add(1, docs[4]);
         assertEquals(result, store.searchByPrefix("tech"));
+        assertEquals(result, store.searchByPrefix("tech"));
     }
 
     // Make sure can search different keywords for different results
@@ -598,6 +644,54 @@ public class DocumentStoreTest {
         result.add(docs[0]);
         assertTrue(result.containsAll(store.searchByPrefix("I")));
         assertTrue(store.searchByPrefix("I").containsAll(result));
+    }
+
+    // Make sure if delete a document, it no longer returns in searchByPrefix
+    // Whether deleted regularly or with put(null)
+    @Test
+    public void searchByPrefixIgnoresDeletedDocs() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        URI[] uris = getURIs();
+        ArrayList<Document> result = new ArrayList<>();
+        result.add(docs[2]);
+        result.add(docs[4]);
+        result.add(docs[1]);
+        result.add(docs[0]);
+        assertEquals(result, store.searchByPrefix("tech"));
+        store.deleteDocument(uris[1]);
+        result.remove(docs[1]);
+        result.remove(docs[2]);
+        assertEquals(result, store.searchByPrefix("technology"));
+        //store.putDocument(null, uris[2], DocumentFormat.TXT);
+        //result.remove(docs[2]);
+        //assertEquals(result, store.searchByPrefix("tech"));
+    }
+
+    // test can delete and undo and it will return in searches, whether deleteDoc or put(null)
+    @Test
+    public void searchByPrefixSeesDeletedDocsUndone() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        URI[] uris = getURIs();
+        ArrayList<Document> result = new ArrayList<>();
+        result.add(docs[2]);
+        result.add(docs[4]);
+        result.add(docs[1]);
+        result.add(docs[0]);
+        assertEquals(result, store.search("tech"));
+        store.deleteDocument(uris[1]);
+        result.remove(docs[1]);
+        assertEquals(result, store.search("tech"));
+        store.undo();
+        result.add(2, docs[1]);
+        assertEquals(result, store.search("tech"));
+        store.putDocument(null, uris[2], DocumentFormat.TXT);
+        result.remove(docs[2]);
+        assertEquals(result, store.search("tech"));
+        store.undo(uris[2]);
+        result.add(0, docs[2]);
+        assertEquals(result, store.search("tech"));
     }
 
     // Make sure empty list if no matches
