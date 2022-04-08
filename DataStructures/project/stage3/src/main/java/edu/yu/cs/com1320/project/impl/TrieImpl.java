@@ -225,7 +225,11 @@ public class TrieImpl<Value> implements Trie<Value> {
 
         if (key.length() == 1) {
             currentNode.links[cValue] = null; // deleting the value
-            return false; // time to go up, we return false since we may or may not delete its parent also
+            // if the link we just deleted is the only link on this level, we return false,
+                // because we might delete the parent
+            // but if there are other links, we return true, because we don't want to delete them
+            return childNumber(currentNode) > 0;
+             // time to go up, we return false since we may or may not delete its parent also
         }
 
         //proceed to the next node in the chain of nodes that forms the desired key
