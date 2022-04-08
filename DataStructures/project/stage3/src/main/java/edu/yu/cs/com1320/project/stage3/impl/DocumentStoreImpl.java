@@ -1,5 +1,6 @@
 package edu.yu.cs.com1320.project.stage3.impl;
 
+import edu.yu.cs.com1320.project.Stack;
 import edu.yu.cs.com1320.project.stage3.*;
 import edu.yu.cs.com1320.project.*;
 import edu.yu.cs.com1320.project.impl.*;
@@ -7,9 +8,8 @@ import edu.yu.cs.com1320.project.impl.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Stream;
 
 public class DocumentStoreImpl implements DocumentStore {
     // must use HashTableImpl to store documents
@@ -220,7 +220,28 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public List<Document> search(String keyword) {
-        return searchTrie.getAllSorted(keyword, new DocComparator(keyword));
+        return searchTrie.getAllSorted(cleanKey(keyword), new DocComparator(keyword));
+    }
+
+    // this method turns the key lowercase and gets rid of any symbols
+    private String cleanKey(String key) {
+        if (key == null) {
+            throw new IllegalArgumentException("Key is null");
+        }
+        String newKey = "";
+        // the following loop makes sure the key only contains alphanumerics
+        for (int i = 0; i < key.length(); i++) {
+            if (Character.getType(key.charAt(i)) == Character.UPPERCASE_LETTER) {
+                newKey += (Character.toLowerCase(key.charAt(i)));
+                // so that it will be lowercase
+            }
+            if (Character.getType(key.charAt(i)) == Character.LOWERCASE_LETTER ||
+                    Character.getType(key.charAt(i)) == Character.DECIMAL_DIGIT_NUMBER) {
+                newKey += (Character.toLowerCase(key.charAt(i)));
+            }
+            // if it isn't a letter or a number, it isn't added
+        }
+        return newKey;
     }
 
     /**
@@ -233,7 +254,7 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public List<Document> searchByPrefix(String keywordPrefix) {
-        return searchTrie.getAllWithPrefixSorted(keywordPrefix, new PrefixComparator(keywordPrefix));
+        return searchTrie.getAllWithPrefixSorted(cleanKey(keywordPrefix), new PrefixComparator(keywordPrefix));
     }
 
     /**
@@ -244,7 +265,23 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public Set<URI> deleteAll(String keyword) {
-        return null;
+        Set<Document> deleted = searchTrie.deleteAll(cleanKey(keyword));
+        for (Document doc : deleted) {
+            // we delete the doc from our document memory and our word memory
+            removeDocFromTrie(doc);
+            table.put(doc.getKey(), null);
+        }
+        return extractURIs(deleted);
+    }
+
+    // this turns a Set of Documents to a set of their URIs
+    // There has got to be a way to do this with streams, but I can't figure it out
+    private Set<URI> extractURIs(Set<Document> docSet) {
+        Set<URI> returnSet = new HashSet<>();
+        for (Document doc : docSet) {
+            returnSet.add(doc.getKey());
+        }
+        return returnSet;
     }
 
     /**

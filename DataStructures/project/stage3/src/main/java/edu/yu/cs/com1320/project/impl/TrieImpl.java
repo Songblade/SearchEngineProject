@@ -217,15 +217,20 @@ public class TrieImpl<Value> implements Trie<Value> {
 
     // deletes a node and all of its children, and maybe parents if they don't have any other children
     private boolean deleteNode(Node<Value> currentNode, String key) {
-        //proceed to the next node in the chain of nodes that forms the desired key
+
         char c = key.charAt(0);
-        key = key.substring(1);
         int cValue = getArrayValue(c); // the value of c's array slot
+
         // if we've reached the last node in the key, delete the node
+
         if (key.length() == 1) {
             currentNode.links[cValue] = null; // deleting the value
             return false; // time to go up, we return false since we may or may not delete its parent also
         }
+
+        //proceed to the next node in the chain of nodes that forms the desired key
+        key = key.substring(1); // this must be after the stopping point, so that we have the right key length
+
         // next link is null, means what we are deleting is already deleted, time to go up
         if (currentNode.links[cValue] == null) {
             return true; // The only way possible to have a null value is if there is another brother of the node
