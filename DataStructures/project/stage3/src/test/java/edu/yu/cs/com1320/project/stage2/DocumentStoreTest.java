@@ -663,10 +663,11 @@ public class DocumentStoreTest {
         store.deleteDocument(uris[1]);
         result.remove(docs[1]);
         result.remove(docs[2]);
-        assertEquals(result, store.searchByPrefix("technology"));
-        //store.putDocument(null, uris[2], DocumentFormat.TXT);
-        //result.remove(docs[2]);
-        //assertEquals(result, store.searchByPrefix("tech"));
+        assertTrue(result.containsAll(store.searchByPrefix("technology")));
+        assertTrue(store.searchByPrefix("technology").containsAll(result));
+        store.putDocument(null, uris[2], DocumentFormat.TXT);
+        result.remove(docs[2]);
+        assertEquals(result, store.searchByPrefix("tech"));
     }
 
     // test can delete and undo and it will return in searches, whether deleteDoc or put(null)
