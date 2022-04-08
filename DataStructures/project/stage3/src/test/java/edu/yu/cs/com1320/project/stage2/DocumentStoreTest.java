@@ -681,19 +681,19 @@ public class DocumentStoreTest {
         result.add(docs[4]);
         result.add(docs[1]);
         result.add(docs[0]);
-        assertEquals(result, store.search("tech"));
+        assertEquals(result, store.searchByPrefix("tech"));
         store.deleteDocument(uris[1]);
         result.remove(docs[1]);
-        assertEquals(result, store.search("tech"));
+        assertEquals(result, store.searchByPrefix("tech"));
         store.undo();
         result.add(2, docs[1]);
-        assertEquals(result, store.search("tech"));
+        assertEquals(result, store.searchByPrefix("tech"));
         store.putDocument(null, uris[2], DocumentFormat.TXT);
         result.remove(docs[2]);
-        assertEquals(result, store.search("tech"));
+        assertEquals(result, store.searchByPrefix("tech"));
         store.undo(uris[2]);
         result.add(0, docs[2]);
-        assertEquals(result, store.search("tech"));
+        assertEquals(result, store.searchByPrefix("tech"));
     }
 
     // Make sure empty list if no matches
