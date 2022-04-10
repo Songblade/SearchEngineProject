@@ -177,19 +177,34 @@ public class DocumentStoreImpl implements DocumentStore {
         // if it is the command I am looking for, I activate it
         // if I never find the command, I throw an ISE
         // After activating it or before leaving with the ISE, I put all the stuff from the helperStack back on the main stack
-        GenericCommand<URI> command;
+        Undoable command;
         boolean undone = false;
         try {
             do { // I don't need a do-while, a regular while would do, but I ended up with this and see no problems
-                command = (GenericCommand<URI>) commandStack.pop();
+                command = commandStack.pop();
                 if (command == null) {
                     throw new IllegalStateException("No commands with the uri \"" + uri + "\" to be undone");
-                }
-                if (command.getTarget().equals(uri)) { // if we found our command
-                    command.undo();
-                    undone = true;
-                } else { // if this is a dud that is not getting undone
-                    helperStack.push(command);
+                } else if (command instanceof GenericCommand) { // if this is a single command
+                    if (((GenericCommand) command).getTarget().equals(uri)) { // if we found our command
+                        command.undo();
+                        undone = true;
+                    } else { // if this is a dud that is not getting undone
+                        helperStack.push(command);
+                    }
+                } else if (command instanceof CommandSet) {
+                    CommandSet<URI> commandSet = (CommandSet<URI>) command; // so we can use CommandSet methods
+                    // and don't have to keep casting it
+                    if (commandSet.containsTarget(uri)) { // if we found our command
+                        commandSet.undo(uri);
+                        undone = true;
+                        // if there are still more commands in it, put it back in the commandStack
+                        // so it can be undone from again in the future
+                        if (commandSet.size() > 0) {
+                            commandStack.push(commandSet);
+                        }
+                    } else { // if this is a dud that is not getting undone
+                        helperStack.push(commandSet);
+                    }
                 }
             } while (!undone);
         } finally {
@@ -266,12 +281,27 @@ public class DocumentStoreImpl implements DocumentStore {
     @Override
     public Set<URI> deleteAll(String keyword) {
         Set<Document> deleted = searchTrie.deleteAll(cleanKey(keyword));
-        for (Document doc : deleted) {
+        removeDocs(deleted);
+        return extractURIs(deleted);
+    }
+
+    // this method deletes a set of documents from both the hashtable and trie
+    // it also creates a CommandSet to undo
+    private void removeDocs(Set<Document> docs) {
+        CommandSet<URI> undoActions = new CommandSet<>();
+        for (Document doc : docs) {
+            // we create an undo for the document, which will add it back to both the HashTable and the Trie
+            undoActions.addCommand(new GenericCommand<>(doc.getKey(), uri1 -> {
+                table.put(doc.getKey(), doc);
+                putWordsInTrie(doc);
+                return true;
+            }));
+
             // we delete the doc from our document memory and our word memory
             removeDocFromTrie(doc);
             table.put(doc.getKey(), null);
         }
-        return extractURIs(deleted);
+        commandStack.push(undoActions);
     }
 
     // this turns a Set of Documents to a set of their URIs
@@ -293,7 +323,9 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public Set<URI> deleteAllWithPrefix(String keywordPrefix) {
-        return null;
+        Set<Document> deleted = searchTrie.deleteAllWithPrefix(cleanKey(keywordPrefix));
+        removeDocs(deleted);
+        return extractURIs(deleted);
     }
 
 }

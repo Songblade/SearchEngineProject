@@ -794,23 +794,148 @@ public class DocumentStoreTest {
 
     // Tests for deleteAllWithPrefix
     // Makes sure deletes all
+    @Test
+    public void deleteAllWithPrefixWorks() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        URI[] uris = getURIs();
+        store.deleteAllWithPrefix("tech");
+        ArrayList<Document> result = new ArrayList<>();
+        assertEquals(result, store.search("tech"));
+        assertEquals(result, store.searchByPrefix("tech"));
+        assertEquals(docs[3], store.getDocument(uris[3]));
+        result.add(docs[3]);
+        assertEquals(result, store.search("fear"));
+        assertEquals(docs[5], store.getDocument(uris[5]));
+        assertNull(store.getDocument(uris[1]));
+    }
+
     // Makes sure returns set correctly
+    @Test
+    public void deleteAllWithPrefixReturns() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        URI[] uris = getURIs();
+        HashSet<URI> result = new HashSet<>();
+        result.add(uris[0]);
+        result.add(uris[1]);
+        result.add(uris[2]);
+        result.add(uris[4]);
+        assertEquals(result, store.deleteAllWithPrefix("tech"));
+    }
+
     // Makes sure empty set if nothing deleted
     // Make sure empty set if only thing that could be deleted is binary
     // Make sure symbol word doesn't delete anything
+    @Test
+    public void deleteAllWithPrefixReturnsEmpty() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        HashSet<URI> result = new HashSet<>();
+        assertEquals(result, store.deleteAllWithPrefix("ichthio"));
+        assertEquals(result, store.deleteAllWithPrefix("doesn't"));
+        assertEquals(result, store.deleteAllWithPrefix("?"));
+    }
+
     // Makes sure ignores case and symbols
+    @Test
+    public void deleteAllWithPrefixIgnoresCaseAndSymbols() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        URI[] uris = getURIs();
+        ArrayList<Document> result = new ArrayList<>();
+        result.add(docs[4]);
+        store.deleteAllWithPrefix("LOVE");
+        assertEquals(result, store.search("technology"));
+        store.deleteAllWithPrefix("(cares)");
+        result.add(docs[1]);
+        assertEquals(result, store.searchByPrefix("tech"));
+    }
 
     // Tests for undo with deleteAll
     // Makes sure can deleteAll and undo
+    @Test
+    public void deleteAllWorksWithUndo() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        store.deleteAll("tech");
+        ArrayList<Document> result = new ArrayList<>();
+        assertEquals(result, store.search("tech"));
+        store.undo();
+        result.add(docs[2]);
+        result.add(docs[1]);
+        result.add(docs[4]);
+        assertEquals(result, store.search("tech"));
+    }
+
     // Makes sure can deleteAll, undo(URI), and the others will stay deleted
+    @Test
+    public void deleteAllWorksWithUndoURI() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        URI[] uris = getURIs();
+        store.deleteAll("tech");
+        ArrayList<Document> result = new ArrayList<>();
+        assertEquals(result, store.search("tech"));
+        store.undo(uris[1]);
+        result.add(docs[1]);
+        assertEquals(result, store.search("tech"));
+        store.undo();
+        result.add(0, docs[2]);
+        result.add(docs[4]);
+        assertEquals(result, store.search("tech"));
+    }
+
     // Makes sure can deleteAll, undo(URI) each doc deleted, and next undo will undo what is below this
+    @Test
+    public void deleteAllUndoURICanGetRidOfCommandSet() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        URI[] uris = getURIs();
+        store.deleteDocument(uris[5]);
+        assertNull(store.getDocument(uris[5]));
+        store.deleteAll("tech");
+        ArrayList<Document> result = new ArrayList<>();
+        assertEquals(result, store.search("tech"));
+        store.undo(uris[1]);
+        result.add(docs[1]);
+        assertEquals(result, store.search("tech"));
+        store.undo(uris[2]);
+        result.add(0, docs[2]);
+        assertEquals(result, store.search("tech"));
+        store.undo(uris[4]);
+        result.add(docs[4]);
+        assertEquals(result, store.search("tech"));
+        store.undo();
+        assertEquals(docs[5], store.getDocument(uris[5]));
+    }
 
-    // Tests for undo with deleteAllWithPrefix
-    // Makes sure can undo deleteAllWithPrefix and undo each one
-    // Makes sure can deleteAll, undo(URI), and the others will stay deleted
+    // Makes sure that when undo, also adds back for non-keywords
+    @Test
+    public void deleteAllUndoWorksForNonKeywords() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        store.deleteAll("tech");
+        ArrayList<Document> result = new ArrayList<>();
+        result.add(docs[3]);
+        assertEquals(result, store.search("fear"));
+        store.undo();
+        result.add(docs[1]);
+        assertEquals(result, store.search("fear"));
+    }
 
-    // tech: 0 has 0, 1 has 3, 2 has 4, 3 has 0, 4 has 2, 5 is binary (2, 1, [4])
-    // tech- (prefix): 0 has 1, 1 has 3, 2 has 6, 3 has 0, 4 has 4, 5 is binary (2, [4], 1, 0)
-    // fear: 0 has 0, 1 has 1, 2 has 0, 3 has 4, 4 has 0, 5 is binary (3, 1)
+    // Makes sure that undo also works with deleteAllWithPrefix
+    @Test
+    public void deleteAllWithPrefixWorksWithUndo() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        store.deleteAllWithPrefix("tech");
+        ArrayList<Document> result = new ArrayList<>();
+        assertEquals(result, store.searchByPrefix("tech"));
+        store.undo();
+        result.add(docs[2]);
+        result.add(docs[4]);
+        result.add(docs[1]);
+        result.add(docs[0]);
+        assertEquals(result, store.searchByPrefix("tech"));
+    }
 
 }

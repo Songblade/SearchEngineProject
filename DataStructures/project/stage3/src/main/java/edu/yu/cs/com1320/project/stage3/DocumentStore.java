@@ -69,6 +69,7 @@ public interface DocumentStore
 
     /**
      * Completely remove any trace of any document which contains the given keyword
+     * Search is CASE INSENSITIVE.
      * @param keyword
      * @return a Set of URIs of the documents that were deleted.
      */
