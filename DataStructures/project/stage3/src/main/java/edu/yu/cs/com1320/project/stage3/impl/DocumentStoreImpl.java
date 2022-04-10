@@ -202,6 +202,7 @@ public class DocumentStoreImpl implements DocumentStore {
     }
 
     // I am making this generic because I can, even though I will only ever use it with URI
+    // if this is the right command, we delete it, otherwise, we put it on the helper stack
     private <T> boolean checkAndDeleteGenericCommand(GenericCommand<T> command, T uri, Stack<Undoable> helperStack) {
         if (command.getTarget().equals(uri)) { // if we found our command
             command.undo();
@@ -212,6 +213,8 @@ public class DocumentStoreImpl implements DocumentStore {
         return false;
     }
 
+    // if the command set has the right command, we delete the command (and maybe the entire set), if not, we put it
+    // on the helper stack
     private <T> boolean checkAndDeleteCommandSet(CommandSet<T> commandSet, T uri, Stack<Undoable> helperStack) {
         if (commandSet.containsTarget(uri)) { // if we found our command
             commandSet.undo(uri);
