@@ -20,7 +20,7 @@ public class DocumentStoreAPITest {
         @SuppressWarnings("rawtypes")
         Class[] classes = DocumentStoreImpl.class.getInterfaces();
         assertTrue(classes.length == 1);
-        assertTrue(classes[0].getName().equals("edu.yu.cs.com1320.project.stage2.DocumentStore"));
+        assertTrue(classes[0].getName().equals("edu.yu.cs.com1320.project.stage3.DocumentStore"));
     }
 
     @Test
@@ -32,7 +32,7 @@ public class DocumentStoreAPITest {
                 publicMethodCount++;
             }
         }
-        assertTrue(publicMethodCount == 5);
+        assertTrue(publicMethodCount == 9);
     }
 
     @Test

@@ -42,15 +42,8 @@ public class DocumentStoreImpl implements DocumentStore {
             throw new IllegalArgumentException("format is null");
         }
 
-        //this part deals with the adding the command to the stack
-        //commandStack.push(new Command(uri, () -> ()));
-        // since I need the Command added to add the old doc
-        int oldHash; // the old hashcode, to be returned
-        if (table.get(uri) == null) { // I must find it now, because if it is a delete, I will be returning soon
-            oldHash = 0; // I don't want problems getting the hashcode of a null element
-        } else {
-            oldHash = table.get(uri).hashCode();
-        }
+        // I must find it now, because if it is a delete, I will be returning soon
+        int oldHash = getOldHashCode(uri); // the old hashcode, to be returned
 
         if (input == null) { // deleting the document, if that is what was asked
             deleteDocument(uri); // using this method, so that the undo will work properly
@@ -60,6 +53,8 @@ public class DocumentStoreImpl implements DocumentStore {
         // everything from here on in should only happen if I have a valid document
         Document doc = readDataToDocument(input, uri, format);
 
+        //this part deals with the adding the command to the stack
+        // since I need the Command added to add the old doc
         Document previousDoc = table.get(uri);
         commandStack.push(new GenericCommand<>(uri, (uri1) -> {
             // if previousDoc is null, HashTable will delete it for me
@@ -71,6 +66,17 @@ public class DocumentStoreImpl implements DocumentStore {
 
         table.put(uri, doc);
         putWordsInTrie(doc);
+        return oldHash;
+    }
+
+    // this method returns the hash code of whatever document putDocument will be replacing
+    private int getOldHashCode(URI uri) {
+        int oldHash; // the old hashcode, to be returned
+        if (table.get(uri) == null) {
+            oldHash = 0; // I don't want problems getting the hashcode of a null element
+        } else {
+            oldHash = table.get(uri).hashCode();
+        }
         return oldHash;
     }
 

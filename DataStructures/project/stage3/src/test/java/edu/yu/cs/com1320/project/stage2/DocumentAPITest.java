@@ -19,7 +19,7 @@ public class DocumentAPITest {
         @SuppressWarnings("rawtypes")
         Class[] classes = DocumentImpl.class.getInterfaces();
         assertTrue(classes.length == 1);
-        assertTrue(classes[0].getName().equals("edu.yu.cs.com1320.project.stage2.Document"));
+        assertTrue(classes[0].getName().equals("edu.yu.cs.com1320.project.stage3.Document"));
     }
 
     @Test
@@ -33,7 +33,7 @@ public class DocumentAPITest {
                 }
             }
         }
-        assertTrue(publicMethodCount == 3);
+        assertTrue(publicMethodCount == 5);
     }
 
     @Test
