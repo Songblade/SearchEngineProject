@@ -922,6 +922,21 @@ public class DocumentStoreTest {
         assertEquals(result, store.search("fear"));
     }
 
+    // Makes sure that an empty undo from deleteAll still takes up space
+    @Test
+    public void deleteAllUndoEmptyTakesSpace() throws URISyntaxException, IOException {
+        DocumentStore store = fullStore();
+        Document[] docs = newDocs();
+        URI[] uris = getURIs();
+        store.deleteDocument(uris[5]);
+        assertNull(store.getDocument(uris[5]));
+        store.deleteAll("cytoplasm");
+        store.undo();
+        assertNull(store.getDocument(uris[5]));
+        store.undo();
+        assertEquals(docs[5], store.getDocument(uris[5]));
+    }
+
     // Makes sure that undo also works with deleteAllWithPrefix
     @Test
     public void deleteAllWithPrefixWorksWithUndo() throws URISyntaxException, IOException {
