@@ -250,8 +250,9 @@ public class TrieImpl<Value> implements Trie<Value> {
             return true;
         } else {
             int numOfChildren = childNumber(currentNode);
-            if (numOfChildren > 1) {
+            if (numOfChildren > 1 || !currentNode.links[cValue].values.isEmpty()) {
                 // we can't delete this node or any others, because there are other children
+                // or because it has values that we don't want to be deleted
                 return true;
             } else if (numOfChildren == 1) {
                 // if we went through the entire loop without finding any other non-null children, they must not exist
