@@ -155,8 +155,9 @@ public class MinHeapImplTest {
     @Test
     public void reHeapifySameRangeMattersLater() {
         stuff[0].id = 2;
-        stuff[3].id = 1;
         heap.reHeapify(stuff[0]);
+        stuff[3].id = 1;
+        heap.reHeapify(stuff[3]);
         assertEquals(stuff[3], heap.remove());
         assertEquals(stuff[0], heap.remove());
         assertEquals(stuff[1], heap.remove());
@@ -167,8 +168,9 @@ public class MinHeapImplTest {
     @Test
     public void reHeapifySameRangeMattersLaterAnyOrder() {
         stuff[3].id = 1;
-        stuff[0].id = 2;
         heap.reHeapify(stuff[3]);
+        stuff[0].id = 2;
+        heap.reHeapify(stuff[0]);
         assertEquals(stuff[3], heap.remove());
         assertEquals(stuff[0], heap.remove());
         assertEquals(stuff[1], heap.remove());
@@ -231,6 +233,13 @@ public class MinHeapImplTest {
                 throw new NullPointerException("Test object is null? Seriously? How is this even possible?");
             }
             return this.id - o.id;
+        }
+
+        @Override
+        public String toString() {
+            return "TestClass{" +
+                    "id=" + id +
+                    '}';
         }
     }
 
