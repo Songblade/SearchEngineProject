@@ -3,6 +3,8 @@ package edu.yu.cs.com1320.project.stage4;
 import edu.yu.cs.com1320.project.impl.MinHeapImpl;
 import org.junit.jupiter.api.Test;
 
+import java.util.NoSuchElementException;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class MinHeapImplTest {
@@ -180,6 +182,137 @@ public class MinHeapImplTest {
     // Test that it doesn't work if I use an object that isn't comparable
     // this test is complete because when I tried to write it, the IDE was giving me problems that Object
         // is not comparable
+
+    // For some stupid reason, we are given a class, MinHeap, but aren't told which parts of it actually work
+    // So now I need to test every darn method that they give me, though I will only test the public ones
+    // and isEmpty, since I was explicitly told it didn't work
+
+    // insert and remove
+    // Makes sure can insert and remove a single object
+    @Test
+    public void insertWorksOnce() {
+        MinHeapImpl<Integer> testHeap = new MinHeapImpl<>();
+        testHeap.insert(0);
+        assertEquals(0, testHeap.remove());
+    }
+
+    // Makes sure can insert and remove a whole bunch of objects
+    @Test
+    public void insertWorksManyTimes() {
+        MinHeapImpl<Integer> testHeap = new MinHeapImpl<>();
+        for (int i = 0; i < 100000; i++) {
+            testHeap.insert(i);
+        }
+        for (int i = 0; i < 100000; i++) {
+            assertEquals(i, testHeap.remove());
+        }
+    }
+
+    // Makes sure can insert and remove objects out of order
+    @Test
+    public void insertWorksOutOfOrder() {
+        MinHeapImpl<Integer> testHeap = new MinHeapImpl<>();
+        testHeap.insert(0);
+        testHeap.insert(5);
+        testHeap.insert(3);
+        testHeap.insert(2);
+        testHeap.insert(4);
+        testHeap.insert(6);
+        testHeap.insert(10);
+        assertEquals(0, testHeap.remove());
+        assertEquals(2, testHeap.remove());
+        assertEquals(3, testHeap.remove());
+        assertEquals(4, testHeap.remove());
+        assertEquals(5, testHeap.remove());
+        assertEquals(6, testHeap.remove());
+        assertEquals(10, testHeap.remove());
+    }
+
+    // Makes sure can insert and remove objects way out of order (backwards)
+    @Test
+    public void insertWorksBackwards() {
+        MinHeapImpl<Integer> testHeap = new MinHeapImpl<>();
+        for (int i = 99999; i >= 0; i--) {
+            testHeap.insert(i);
+        }
+        for (int i = 0; i < 100000; i++) {
+            assertEquals(i, testHeap.remove());
+        }
+    }
+
+    // Makes sure can insert, remove down to 0, and then insert some more
+    @Test
+    public void insertCanDeleteAllAndComeBack() {
+        MinHeapImpl<Integer> testHeap = new MinHeapImpl<>();
+        testHeap.insert(0);
+        testHeap.insert(1);
+        testHeap.insert(2);
+        testHeap.remove();
+        testHeap.remove();
+        testHeap.remove();
+        testHeap.insert(0);
+        testHeap.insert(4);
+        testHeap.insert(2);
+        assertEquals(0, testHeap.remove());
+        assertEquals(2, testHeap.remove());
+        assertEquals(4, testHeap.remove());
+    }
+
+    // Makes sure can insert, delete some but not all, and then add more
+    @Test
+    public void insertCanDeleteSomeAndComeBack() {
+        MinHeapImpl<Integer> testHeap = new MinHeapImpl<>();
+        testHeap.insert(0);
+        testHeap.insert(1);
+        testHeap.insert(2);
+        testHeap.remove();
+        testHeap.remove();
+        testHeap.insert(0);
+        testHeap.insert(4);
+        testHeap.insert(3);
+        assertEquals(0, testHeap.remove());
+        assertEquals(2, testHeap.remove());
+        assertEquals(3, testHeap.remove());
+        assertEquals(4, testHeap.remove());
+    }
+
+    // Makes sure can handle compareTo 0 values (will need to use TestClass, since I am not sure what is
+        // supposed to happen with duplicates)
+    @Test
+    public void canHandleEqualStuff() {
+        TestClass example = new TestClass(4);
+        heap.insert(example);
+        heap.remove();
+        for (int i = 0; i < 2; i++) {
+            TestClass removed = heap.remove();
+            if (!removed.equals(example) && !removed.equals(stuff[1])) {
+                fail("Removed value was " + removed + " not " + stuff[1] + " or " + example);
+            }
+        }
+        assertEquals(stuff[2], heap.remove());
+    }
+
+
+    // remove specifically
+    // make sure NoSuchElementException if heap never had anything
+    @Test
+    public void removeThrowsIfNeverHadAnything() {
+        MinHeapImpl<Integer> testHeap = new MinHeapImpl<>();
+        assertThrows(NoSuchElementException.class, testHeap::remove);
+    }
+
+    // make sure NoSuchElementException if heap had stuff added and then removed
+    @Test
+    public void removeThrowsIfDeletedAll() {
+        MinHeapImpl<Integer> testHeap = new MinHeapImpl<>();
+        testHeap.insert(0);
+        testHeap.insert(1);
+        testHeap.insert(2);
+        testHeap.remove();
+        testHeap.remove();
+        testHeap.remove();
+        assertThrows(NoSuchElementException.class, testHeap::remove);
+    }
 
     private static class TestClass implements Comparable<TestClass>{
         private int id;
