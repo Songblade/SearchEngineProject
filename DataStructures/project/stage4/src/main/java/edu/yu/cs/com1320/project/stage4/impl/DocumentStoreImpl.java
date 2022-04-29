@@ -15,12 +15,18 @@ public class DocumentStoreImpl implements DocumentStore {
     private HashTable<URI, Document> table;
     private Stack<Undoable> commandStack;
     private Trie<Document> searchTrie;
+    private MinHeap<Document> memoryHeap;
+    private int maxDocCount = -1; // maximum number of docs allowed, -1 means no limit
+    private int maxDocBytes = -1; // maximum number of doc bytes allowed, -1 means no limit
+    private int docCount; // current number of docs
+    private int docBytes; // current number of doc bytes
 
-    //This shouldn't do much, just set up the HashTable
+    //This shouldn't do much, just set up the various fields
     public DocumentStoreImpl() {
         table = new HashTableImpl<>();
         commandStack = new StackImpl<>();
         searchTrie = new TrieImpl<>();
+        memoryHeap = new MinHeapImpl<>();
     }
 
     /**
@@ -50,16 +56,32 @@ public class DocumentStoreImpl implements DocumentStore {
         }
 
         // everything from here on in should only happen if I have a valid document
-        Document doc = readDataToDocument(input, uri, format);
 
+        Document doc = readDataToDocument(input, uri, format);
+        if (maxDocBytes != -1 && getByteLength(doc) > maxDocBytes) {
+            throw new IllegalArgumentException("document size " + getByteLength(doc) + " bytes is greater than limit of " + maxDocBytes);
+        }
+
+        // if there is a previous doc, we remove it from the trie and heap
+        // I'm honestly not sure how no one caught the problem of never removing old docs from tries
+        if (table.get(uri) != null) {
+            removeDocFromTrie(table.get(uri));
+            removeDocFromHeap(table.get(uri));
+        }
+
+        addDocToHeap(doc);
         //this part deals with the adding the command to the stack
         // since I need the Command added to add the old doc
         Document previousDoc = table.get(uri);
         commandStack.push(new GenericCommand<>(uri, (uri1) -> {
             // if previousDoc is null, HashTable will delete it for me
             removeDocFromTrie(doc);
+            removeDocFromHeap(doc);
             table.put(uri, previousDoc);
-            putWordsInTrie(previousDoc);
+            if (previousDoc != null) {
+                putWordsInTrie(previousDoc);
+                addDocToHeap(previousDoc);
+            }
             return true;
         }));
 
@@ -70,13 +92,7 @@ public class DocumentStoreImpl implements DocumentStore {
 
     // this method returns the hash code of whatever document putDocument will be replacing
     private int getOldHashCode(URI uri) {
-        int oldHash; // the old hashcode, to be returned
-        if (table.get(uri) == null) {
-            oldHash = 0; // I don't want problems getting the hashcode of a null element
-        } else {
-            oldHash = table.get(uri).hashCode();
-        }
-        return oldHash;
+        return table.get(uri) == null ? 0 : table.get(uri).hashCode();
     }
 
     // So I don't have to worry about having a putDocument method too long, I am moving the code that gets a
@@ -107,12 +123,94 @@ public class DocumentStoreImpl implements DocumentStore {
     }
 
     /**
+     * Does all the memoryHeap stuff in putDocument, like adding it to the heap and overflowing memory
+     * I no longer throw an error here if the doc is too big to fit
+     * @param doc being added to the DocumentStore
+     */
+    private void addDocToHeap(Document doc) {
+        int byteLength = getByteLength(doc);
+        doc.setLastUseTime(System.nanoTime());
+        docCount++;
+        docBytes += byteLength; // gets whatever the byte length is
+        memoryHeap.insert(doc);
+        while ((maxDocCount != -1 && docCount > maxDocCount) ||
+                (maxDocBytes != -1 && docBytes > maxDocBytes)) {
+            overflowMemory();
+        }
+    }
+
+    /**
+     * @param doc whose byte length you are getting
+     * @return the length of the byte stored in the doc, or corresponding to its string
+     */
+    private int getByteLength(Document doc) {
+        return doc.getDocumentTxt() == null ? doc.getDocumentBinaryData().length :
+                doc.getDocumentTxt().getBytes().length;
+    }
+
+    /**
+     * Removes every trace of the least-recently used doc from wherever it can be found
+     */
+    private void overflowMemory() {
+        // removes from memory heap
+        Document deletedDoc = memoryHeap.remove();
+        // removes from trie
+        removeDocFromTrie(deletedDoc);
+        // removes from hashtable
+        table.put(deletedDoc.getKey(), null);
+        // removes from stack
+        Stack<Undoable> helperStack = new StackImpl<>(); // to put stuff on
+        // I go through each command on the stack and examine it
+        // if it is not the command I am looking for, I put it on helperStack
+        // if it is the command I am looking for, I remove it, then continue searching
+        // when I get to the bottom of the stack, I restack
+        Undoable command;
+        while (commandStack.peek() != null) {
+            command = commandStack.pop();
+            if (command instanceof GenericCommand) { // if this is a single command
+                checkAndDeleteGenericCommand((GenericCommand<URI>) command, deletedDoc.getKey(), helperStack, false);
+            } else if (command instanceof CommandSet) {
+                checkAndDeleteCommandSet((CommandSet<URI>) command, deletedDoc.getKey(), helperStack, false);
+            }
+        }
+        // when we have gone through the entire stack
+        restackStack(helperStack);
+        // lowers the doc and byte totals
+        docCount--;
+        docBytes -= getByteLength(deletedDoc);
+    }
+
+    /**
+     * This method removes a document from the heap
+     * @param doc to be removed
+     */
+    private void removeDocFromHeap(Document doc) {
+        Stack<Document> helperStack = new StackImpl<>(); // to store docs
+        Document foundDoc = memoryHeap.remove();
+        while (!doc.getKey().equals(foundDoc.getKey())) {
+            helperStack.push(foundDoc);
+            foundDoc = memoryHeap.remove();
+        }
+        // at this point, we have found the right doc, so we put everything else back
+        while (helperStack.peek() != null) {
+            memoryHeap.insert(helperStack.pop());
+        }
+        // show that the doc has been removed
+        docCount--;
+        docBytes -= getByteLength(doc);
+    }
+
+    /**
      * @param uri the unique identifier of the document to get
      * @return the given document
      */
     @Override
     public Document getDocument(URI uri) {
-        return table.get(uri); // if the value is null, this will return null
+        Document doc = table.get(uri);
+        if (doc != null) {
+            updateDocTime(doc);
+        }
+        return doc; // if the value is null, this will return null
     }
 
     /**
@@ -126,6 +224,12 @@ public class DocumentStoreImpl implements DocumentStore {
         }
         Document previousDoc = table.get(uri);
         commandStack.push(new GenericCommand<>(uri, (uri1) -> {
+            // I don't have to worry about taking out what was previous, because this is delete
+            // I need to figure out what to do if the doc is too big
+            if (maxDocBytes != -1 && getByteLength(previousDoc) > maxDocBytes) {
+                throw new IllegalArgumentException("document size " + getByteLength(previousDoc) + " bytes is greater than limit of " + maxDocBytes);
+            }
+            addDocToHeap(previousDoc);
             // if previousDoc is null, HashTable will delete it for me
             table.put(uri, previousDoc);
             putWordsInTrie(previousDoc);
@@ -138,6 +242,7 @@ public class DocumentStoreImpl implements DocumentStore {
         }
         // if there is something to delete
         removeDocFromTrie(previousDoc);
+        removeDocFromHeap(previousDoc);
         table.put(uri, null);
         return true;
     }
@@ -190,9 +295,9 @@ public class DocumentStoreImpl implements DocumentStore {
                 if (command == null) {
                     throw new IllegalStateException("No commands with the uri \"" + uri + "\" to be undone");
                 } else if (command instanceof GenericCommand) { // if this is a single command
-                    undone = checkAndDeleteGenericCommand((GenericCommand<URI>) command, uri, helperStack);
+                    undone = checkAndDeleteGenericCommand((GenericCommand<URI>) command, uri, helperStack, true);
                 } else if (command instanceof CommandSet) {
-                    undone = checkAndDeleteCommandSet((CommandSet<URI>) command, uri, helperStack);
+                    undone = checkAndDeleteCommandSet((CommandSet<URI>) command, uri, helperStack, true);
                 }
             } while (!undone);
         } finally {
@@ -203,9 +308,12 @@ public class DocumentStoreImpl implements DocumentStore {
 
     // I am making this generic because I can, even though I will only ever use it with URI
     // if this is the right command, we delete it, otherwise, we put it on the helper stack
-    private <T> boolean checkAndDeleteGenericCommand(GenericCommand<T> command, T uri, Stack<Undoable> helperStack) {
+    // undoing in the process if appropriate
+    private <T> boolean checkAndDeleteGenericCommand(GenericCommand<T> command, T uri, Stack<Undoable> helperStack, boolean undoing) {
         if (command.getTarget().equals(uri)) { // if we found our command
-            command.undo();
+            if (undoing) {
+                command.undo();
+            }
             return true;
         }
         // if this is a dud that is not getting undone
@@ -215,9 +323,23 @@ public class DocumentStoreImpl implements DocumentStore {
 
     // if the command set has the right command, we delete the command (and maybe the entire set), if not, we put it
     // on the helper stack
-    private <T> boolean checkAndDeleteCommandSet(CommandSet<T> commandSet, T uri, Stack<Undoable> helperStack) {
+    // undoing also if appropriate
+    private <T> boolean checkAndDeleteCommandSet(CommandSet<T> commandSet, T uri, Stack<Undoable> helperStack, boolean undoing) {
         if (commandSet.containsTarget(uri)) { // if we found our command
-            commandSet.undo(uri);
+            if (undoing) {
+                commandSet.undo(uri);
+            } else {
+                Iterator<GenericCommand<T>> iterator = commandSet.iterator();
+                while (iterator.hasNext()) {
+                    // goes through the stuff in the commandSet, and removes without undoing the now-faulty
+                        // command
+                    if (iterator.next().getTarget().equals(uri)) {
+                        iterator.remove();
+                        break;
+                    }
+                }
+            }
+
             // if there are still more commands in it, put it back in the commandStack
             // so it can be undone from again in the future
             if (commandSet.size() > 0) {
@@ -252,7 +374,11 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public List<Document> search(String keyword) {
-        return searchTrie.getAllSorted(cleanKey(keyword), new DocComparator(keyword));
+        List<Document> results = searchTrie.getAllSorted(cleanKey(keyword), new DocComparator(keyword));
+        for (Document doc : results) {
+            updateDocTime(doc);
+        }
+        return results;
     }
 
     // this method turns the key lowercase and gets rid of any symbols
@@ -286,7 +412,11 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public List<Document> searchByPrefix(String keywordPrefix) {
-        return searchTrie.getAllWithPrefixSorted(cleanKey(keywordPrefix), new PrefixComparator(keywordPrefix));
+        List<Document> results = searchTrie.getAllWithPrefixSorted(cleanKey(keywordPrefix), new PrefixComparator(keywordPrefix));
+        for (Document doc : results) {
+            updateDocTime(doc);
+        }
+        return results;
     }
 
     /**
@@ -311,10 +441,12 @@ public class DocumentStoreImpl implements DocumentStore {
             undoActions.addCommand(new GenericCommand<>(doc.getKey(), uri1 -> {
                 table.put(doc.getKey(), doc);
                 putWordsInTrie(doc);
+                addDocToHeap(doc);
                 return true;
             }));
 
             // we delete the doc from our document memory and our word memory
+            removeDocFromHeap(doc);
             removeDocFromTrie(doc);
             table.put(doc.getKey(), null);
         }
@@ -352,7 +484,13 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public void setMaxDocumentCount(int limit) {
-
+        if (limit <= 0) {
+            throw new IllegalArgumentException("limit " + limit + " documents is too small");
+        }
+        maxDocCount = limit;
+        while (docCount > maxDocCount) {
+            overflowMemory();
+        }
     }
 
     /**
@@ -362,7 +500,22 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public void setMaxDocumentBytes(int limit) {
+        if (limit <= 0) {
+            throw new IllegalArgumentException("limit " + limit + " bytes is too small");
+        }
+        maxDocBytes = limit;
+        while (docBytes > maxDocBytes) {
+            overflowMemory();
+        }
+    }
 
+    /**
+     * Updates the document's time to the current time, to be used when using it
+     * @param doc to be updated
+     */
+    private void updateDocTime(Document doc) {
+        doc.setLastUseTime(System.nanoTime());
+        memoryHeap.reHeapify(doc);
     }
 
 }

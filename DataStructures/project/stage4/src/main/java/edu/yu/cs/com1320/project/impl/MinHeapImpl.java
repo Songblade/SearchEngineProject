@@ -13,7 +13,13 @@ public class MinHeapImpl<E extends Comparable<E>> extends MinHeap<E> {
     @Override
     public void reHeapify(E element) {
         // finds the location of the element, in only O(n) time, unfortunately
+        if (element == null) {
+            throw new IllegalArgumentException("element is null");
+        }
         int elementIndex = getArrayIndex(element);
+        if (elementIndex < 1) {
+            throw new IllegalArgumentException("element " + element + " is not in heap");
+        }
         // upheaps and downheaps, only one (or maybe zero) will actually do anything
         upHeap(elementIndex);
         downHeap(elementIndex);

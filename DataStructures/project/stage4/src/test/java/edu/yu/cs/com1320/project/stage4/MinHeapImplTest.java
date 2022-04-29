@@ -1,5 +1,6 @@
 package edu.yu.cs.com1320.project.stage4;
 
+import edu.yu.cs.com1320.project.MinHeap;
 import edu.yu.cs.com1320.project.impl.MinHeapImpl;
 import org.junit.jupiter.api.Test;
 
@@ -9,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class MinHeapImplTest {
 
-    private MinHeapImpl<TestClass> heap;
+    private MinHeap<TestClass> heap;
     private TestClass[] stuff;
 
     public MinHeapImplTest() {

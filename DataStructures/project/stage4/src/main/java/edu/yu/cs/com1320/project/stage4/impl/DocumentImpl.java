@@ -11,6 +11,7 @@ public class DocumentImpl implements Document {
     private String text; // the text of the document, null if not applicable
     private byte[] binaryData; // the data of the document, null if not applicable
     private Map<String, Integer> wordCount;
+    private long lastUseTime;
 
     // constructor that uses text
     public DocumentImpl(URI uri, String text) {
@@ -136,12 +137,12 @@ public class DocumentImpl implements Document {
      */
     @Override
     public long getLastUseTime() {
-        return 0;
+        return lastUseTime;
     }
 
     @Override
     public void setLastUseTime(long timeInNanoseconds) {
-
+        lastUseTime = timeInNanoseconds;
     }
 
     @Override
@@ -208,7 +209,14 @@ public class DocumentImpl implements Document {
      */
     @Override
     public int compareTo(Document o) {
-        return 0;
+        long timeDif = lastUseTime - o.getLastUseTime();
+        if (timeDif > 0) {
+            return 1;
+        } else if (timeDif < 0) {
+            return -1;
+        } else {
+            return 0;
+        }
     }
 
 /*
