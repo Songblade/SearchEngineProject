@@ -39,28 +39,16 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public int putDocument(InputStream input, URI uri, DocumentFormat format) throws IOException {
-        if (uri == null) {
-            throw new IllegalArgumentException("URI is null");
-        }
-        if (input != null && format == null) { // if input is null, then this is a delete, and the format
-            // doesn't matter
-            throw new IllegalArgumentException("format is null");
-        }
-
-        // I must find it now, because if it is a delete, I will be returning soon
-        int oldHash = getOldHashCode(uri); // the old hashcode, to be returned
-
-        if (input == null) { // deleting the document, if that is what was asked
+        // making the document, and throwing exceptions if necessary
+        Document doc = vetAndMakeDocument(input, uri, format);
+        // gets the old doc's hashcode to be returned, or 0 if there is no old document
+        int oldHash = getOldHashCode(uri);
+        if (doc == null) { // this is actually a delete
             deleteDocument(uri); // using this method, so that the undo will work properly
             return oldHash;
         }
 
         // everything from here on in should only happen if I have a valid document
-
-        Document doc = readDataToDocument(input, uri, format);
-        if (maxDocBytes != -1 && getByteLength(doc) > maxDocBytes) {
-            throw new IllegalArgumentException("document size " + getByteLength(doc) + " bytes is greater than limit of " + maxDocBytes);
-        }
 
         // if there is a previous doc, we remove it from the trie and heap
         // I'm honestly not sure how no one caught the problem of never removing old docs from tries
@@ -88,6 +76,35 @@ public class DocumentStoreImpl implements DocumentStore {
         table.put(uri, doc);
         putWordsInTrie(doc);
         return oldHash;
+    }
+
+    /**
+     * Makes sure the document fits every requirement, and then returns it
+     * @param input stream for the document's data
+     * @param uri address for the document
+     * @param format of the document, TXT or BINARY
+     * @return the document, if all the inputs are valid, or null, if this is a delete
+     */
+    private Document vetAndMakeDocument(InputStream input, URI uri, DocumentFormat format) throws IOException {
+        if (uri == null) {
+            throw new IllegalArgumentException("URI is null");
+        }
+        if (input != null && format == null) { // if input is null, then this is a delete, and the format
+            // doesn't matter
+            throw new IllegalArgumentException("format is null");
+        }
+
+        if (input == null) { // deleting the document, if that is what was asked
+            return null;
+        }
+
+        // everything from here on in should only happen if I have a valid document
+
+        Document doc = readDataToDocument(input, uri, format);
+        if (maxDocBytes != -1 && getByteLength(doc) > maxDocBytes) {
+            throw new IllegalArgumentException("document size " + getByteLength(doc) + " bytes is greater than limit of " + maxDocBytes);
+        }
+        return doc;
     }
 
     // this method returns the hash code of whatever document putDocument will be replacing
