@@ -1,6 +1,7 @@
 package edu.yu.cs.com1320.project.stage4.impl;
 
 import edu.yu.cs.com1320.project.impl.StackImpl;
+import edu.yu.cs.com1320.project.stage5.impl.DocumentImpl;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;

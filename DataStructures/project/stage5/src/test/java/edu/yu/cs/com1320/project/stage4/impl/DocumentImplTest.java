@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 
+import edu.yu.cs.com1320.project.stage5.impl.DocumentImpl;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import edu.yu.cs.com1320.project.Utils;

@@ -1,7 +1,7 @@
 package edu.yu.cs.com1320.project.stage4.impl;
 
-import edu.yu.cs.com1320.project.stage4.Document;
-import edu.yu.cs.com1320.project.stage4.DocumentStore;
+import edu.yu.cs.com1320.project.stage5.*;
+import edu.yu.cs.com1320.project.stage5.impl.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

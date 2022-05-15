@@ -1,6 +1,6 @@
-package edu.yu.cs.com1320.project.stage4.impl;
+package edu.yu.cs.com1320.project.stage5.impl;
 
-import edu.yu.cs.com1320.project.stage4.Document;
+import edu.yu.cs.com1320.project.stage5.Document;
 
 import java.net.URI;
 import java.util.*;
@@ -143,6 +143,24 @@ public class DocumentImpl implements Document {
     @Override
     public void setLastUseTime(long timeInNanoseconds) {
         lastUseTime = timeInNanoseconds;
+    }
+
+    /**
+     * @return a copy of the word to count map so it can be serialized
+     */
+    @Override
+    public Map<String, Integer> getWordMap() {
+        return null;
+    }
+
+    /**
+     * This must set the word to count map during deserialization
+     *
+     * @param wordMap
+     */
+    @Override
+    public void setWordMap(Map<String, Integer> wordMap) {
+
     }
 
     @Override

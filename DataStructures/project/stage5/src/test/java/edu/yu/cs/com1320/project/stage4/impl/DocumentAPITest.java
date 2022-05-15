@@ -9,6 +9,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashSet;
 
+import edu.yu.cs.com1320.project.stage5.impl.DocumentImpl;
+
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DocumentAPITest {

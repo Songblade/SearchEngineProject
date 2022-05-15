@@ -1,7 +1,7 @@
-package edu.yu.cs.com1320.project.stage4.impl;
+package edu.yu.cs.com1320.project.stage5.impl;
 
 import edu.yu.cs.com1320.project.Stack;
-import edu.yu.cs.com1320.project.stage4.*;
+import edu.yu.cs.com1320.project.stage5.*;
 import edu.yu.cs.com1320.project.*;
 import edu.yu.cs.com1320.project.impl.*;
 
@@ -12,7 +12,7 @@ import java.util.*;
 
 public class DocumentStoreImpl implements DocumentStore {
     // must use HashTableImpl to store documents
-    private HashTable<URI, Document> table;
+    //private HashTable<URI, Document> table;
     private Stack<Undoable> commandStack;
     private Trie<Document> searchTrie;
     private MinHeap<Document> memoryHeap;
@@ -23,7 +23,7 @@ public class DocumentStoreImpl implements DocumentStore {
 
     //This shouldn't do much, just set up the various fields
     public DocumentStoreImpl() {
-        table = new HashTableImpl<>();
+        //table = new HashTableImpl<>();
         commandStack = new StackImpl<>();
         searchTrie = new TrieImpl<>();
         memoryHeap = new MinHeapImpl<>();
@@ -52,28 +52,28 @@ public class DocumentStoreImpl implements DocumentStore {
 
         // if there is a previous doc, we remove it from the trie and heap
         // I'm honestly not sure how no one caught the problem of never removing old docs from tries
-        if (table.get(uri) != null) {
-            removeDocFromTrie(table.get(uri));
-            removeDocFromHeap(table.get(uri));
-        }
+        //if (table.get(uri) != null) {
+          //  removeDocFromTrie(table.get(uri));
+            //removeDocFromHeap(table.get(uri));
+        //}
 
         addDocToHeap(doc);
         //this part deals with the adding the command to the stack
         // since I need the Command added to add the old doc
-        Document previousDoc = table.get(uri);
+        //Document previousDoc = table.get(uri);
         commandStack.push(new GenericCommand<>(uri, (uri1) -> {
             // if previousDoc is null, HashTable will delete it for me
             removeDocFromTrie(doc);
             removeDocFromHeap(doc);
-            table.put(uri, previousDoc);
-            if (previousDoc != null) {
-                putWordsInTrie(previousDoc);
-                addDocToHeap(previousDoc);
-            }
+            //table.put(uri, previousDoc);
+            //if (previousDoc != null) {
+              //  putWordsInTrie(previousDoc);
+                //addDocToHeap(previousDoc);
+            //}
             return true;
         }));
 
-        table.put(uri, doc);
+        //table.put(uri, doc);
         putWordsInTrie(doc);
         return oldHash;
     }
@@ -109,7 +109,8 @@ public class DocumentStoreImpl implements DocumentStore {
 
     // this method returns the hash code of whatever document putDocument will be replacing
     private int getOldHashCode(URI uri) {
-        return table.get(uri) == null ? 0 : table.get(uri).hashCode();
+        //return table.get(uri) == null ? 0 : table.get(uri).hashCode();
+        return 0;
     }
 
     // So I don't have to worry about having a putDocument method too long, I am moving the code that gets a
@@ -174,7 +175,7 @@ public class DocumentStoreImpl implements DocumentStore {
         // removes from trie
         removeDocFromTrie(deletedDoc);
         // removes from hashtable
-        table.put(deletedDoc.getKey(), null);
+        //table.put(deletedDoc.getKey(), null);
         // removes from stack
         Stack<Undoable> helperStack = new StackImpl<>(); // to put stuff on
         // I go through each command on the stack and examine it
@@ -223,7 +224,7 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public Document getDocument(URI uri) {
-        Document doc = table.get(uri);
+        Document doc=null;// = table.get(uri);
         if (doc != null) {
             updateDocTime(doc);
         }
@@ -239,7 +240,7 @@ public class DocumentStoreImpl implements DocumentStore {
         if (uri == null) {
             return false; // not deleting anything, because nothing to delete
         }
-        Document previousDoc = table.get(uri);
+        Document previousDoc = null;//table.get(uri);
         commandStack.push(new GenericCommand<>(uri, (uri1) -> {
             // I don't have to worry about taking out what was previous, because this is delete
             // I need to figure out what to do if the doc is too big
@@ -248,7 +249,7 @@ public class DocumentStoreImpl implements DocumentStore {
             }
             addDocToHeap(previousDoc);
             // if previousDoc is null, HashTable will delete it for me
-            table.put(uri, previousDoc);
+            //table.put(uri, previousDoc);
             putWordsInTrie(previousDoc);
             return true;
         }));
@@ -260,7 +261,7 @@ public class DocumentStoreImpl implements DocumentStore {
         // if there is something to delete
         removeDocFromTrie(previousDoc);
         removeDocFromHeap(previousDoc);
-        table.put(uri, null);
+        //table.put(uri, null);
         return true;
     }
 
@@ -456,7 +457,7 @@ public class DocumentStoreImpl implements DocumentStore {
         for (Document doc : docs) {
             // we create an undo for the document, which will add it back to both the HashTable and the Trie
             undoActions.addCommand(new GenericCommand<>(doc.getKey(), uri1 -> {
-                table.put(doc.getKey(), doc);
+                //table.put(doc.getKey(), doc);
                 putWordsInTrie(doc);
                 addDocToHeap(doc);
                 return true;
@@ -465,7 +466,7 @@ public class DocumentStoreImpl implements DocumentStore {
             // we delete the doc from our document memory and our word memory
             removeDocFromHeap(doc);
             removeDocFromTrie(doc);
-            table.put(doc.getKey(), null);
+            //table.put(doc.getKey(), null);
         }
         commandStack.push(undoActions);
     }
