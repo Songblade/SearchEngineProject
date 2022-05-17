@@ -4,6 +4,11 @@ import edu.yu.cs.com1320.project.BTree;
 import edu.yu.cs.com1320.project.impl.BTreeImpl;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BTreeTest {
@@ -87,7 +92,90 @@ public class BTreeTest {
 
     // tests for moveToDisk
     // test that move to disk actually gets there
+    @Test
+    public void moveToDiskGetsItThere() throws Exception {
+        BTree<Integer, String> tree = new BTreeImpl<>();
+        TestManager<Integer, String> manager = new TestManager<>();
+        tree.put(3, "Cheese");
+        tree.put(4, "Smoked cheese");
+        tree.setPersistenceManager(manager);
+        assertNull(manager.deserialize(3));
+        tree.moveToDisk(3);
+        assertEquals("Cheese", manager.deserialize(3));
+    }
+
     // I need to make sure I can move to disk and get still works
+    @Test
+    public void moveToDiskGetBringsBack() throws Exception {
+        BTree<Integer, String> tree = new BTreeImpl<>();
+        TestManager<Integer, String> manager = new TestManager<>();
+        tree.put(3, "Cheese");
+        tree.put(4, "Smoked cheese");
+        tree.setPersistenceManager(manager);
+        assertNull(manager.deserialize(3));
+        tree.moveToDisk(3);
+        assertEquals("Cheese", manager.deserialize(3));
+        assertEquals("Cheese", tree.get(3));
+    }
+
     // When I get from the disk, it is no longer in the disk (using my own persistence manager)
+    @Test
+    public void moveToDiskGetNoLongerOnDisk() throws Exception {
+        BTree<Integer, String> tree = new BTreeImpl<>();
+        TestManager<Integer, String> manager = new TestManager<>();
+        tree.put(3, "Cheese");
+        tree.put(4, "Smoked cheese");
+        tree.setPersistenceManager(manager);
+        assertNull(manager.deserialize(3));
+        tree.moveToDisk(3);
+        assertEquals("Cheese", manager.deserialize(3));
+        assertEquals("Cheese", tree.get(3));
+        assertNull(manager.deserialize(3));
+    }
+
+    // When I put to something in the disk, it is no longer in the disk
+    @Test
+    public void moveToDiskPutBringsBack() throws Exception {
+        BTree<Integer, String> tree = new BTreeImpl<>();
+        TestManager<Integer, String> manager = new TestManager<>();
+        tree.put(3, "Cheese");
+        tree.put(4, "Smoked cheese");
+        tree.setPersistenceManager(manager);
+        assertNull(manager.deserialize(3));
+        tree.moveToDisk(3);
+        assertEquals("Cheese", manager.deserialize(3));
+        tree.put(3, "Cheddar");
+        assertNull(manager.deserialize(3));
+    }
+
+    private static class TestManager<URI, E> implements PersistenceManager<URI, E>{
+
+        private Map<URI, E> memory;
+
+        private TestManager() {
+            memory = new HashMap<>();
+        }
+
+        @Override
+        public void serialize(URI uri, E val) {
+            memory.put(uri, val);
+        }
+
+        @Override
+        public E deserialize(URI uri) {
+            return memory.get(uri);
+        }
+
+        /**
+         * delete the file stored on disk that corresponds to the given key
+         *
+         * @param uri where we are storing it
+         * @return true or false to indicate if deletion occured or not
+         */
+        @Override
+        public boolean delete(URI uri)  {
+            return memory.remove(uri) != null;
+        }
+    }
 
 }
