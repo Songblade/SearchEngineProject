@@ -150,7 +150,7 @@ public class DocumentImpl implements Document {
      */
     @Override
     public Map<String, Integer> getWordMap() {
-        return null;
+        return Collections.unmodifiableMap(wordCount);
     }
 
     /**
@@ -160,7 +160,7 @@ public class DocumentImpl implements Document {
      */
     @Override
     public void setWordMap(Map<String, Integer> wordMap) {
-
+        wordCount = Collections.unmodifiableMap(wordMap);
     }
 
     @Override
