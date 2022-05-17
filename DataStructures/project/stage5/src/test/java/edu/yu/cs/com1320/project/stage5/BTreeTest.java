@@ -4,8 +4,6 @@ import edu.yu.cs.com1320.project.BTree;
 import edu.yu.cs.com1320.project.impl.BTreeImpl;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -146,6 +144,22 @@ public class BTreeTest {
         assertEquals("Cheese", manager.deserialize(3));
         tree.put(3, "Cheddar");
         assertNull(manager.deserialize(3));
+    }
+
+    // testing that if move to disk and delete, get works correctly
+    @Test
+    public void moveToDiskDeleteWorks() throws Exception {
+        BTree<Integer, String> tree = new BTreeImpl<>();
+        TestManager<Integer, String> manager = new TestManager<>();
+        tree.put(3, "Cheese");
+        tree.put(4, "Smoked cheese");
+        tree.setPersistenceManager(manager);
+        assertNull(manager.deserialize(3));
+        tree.moveToDisk(3);
+        assertEquals("Cheese", manager.deserialize(3));
+        tree.put(3, null);
+        assertNull(manager.deserialize(3));
+        assertNull(tree.get(3));
     }
 
     private static class TestManager<URI, E> implements PersistenceManager<URI, E>{
