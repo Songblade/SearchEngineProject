@@ -3,6 +3,7 @@ package edu.yu.cs.com1320.project.impl;
 import edu.yu.cs.com1320.project.BTree;
 import edu.yu.cs.com1320.project.stage5.PersistenceManager;
 
+import java.io.IOException;
 import java.net.URI;
 
 public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key, Value> {
@@ -11,6 +12,7 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
     private Node<Key, Value> root; //root of the B-tree
     private int height; //height of the B-tree
     private int n; //number of key-value pairs in the B-tree
+    private PersistenceManager<Key, Value> memory;
 
     //B-tree node data type
     private static final class Node<Key extends Comparable<Key>, Value> {
@@ -30,7 +32,7 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
         private Key key;
         private Value val;
         private Node<Key, Value> child;
-        private URI uri; // if null, object is in Object. If not, object is at this URI in memory
+        private boolean isInDisk; // if false, object is in Object. If not, object is at the Key in memory
 
         // constructor for branch node
         private Entry(Key key, Node<Key, Value> child) {
@@ -45,9 +47,9 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
         }
 
         // constructor for leaf node when value is missing
-        private Entry(Key key, URI uri) {
+        private Entry(Key key) {
             this.key = key;
-            this.uri = uri;
+            this.isInDisk = true;
         }
 
     }
@@ -66,10 +68,21 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
             throw new IllegalArgumentException("argument to get() is null");
         }
         Entry<Key, Value> entry = this.get(this.root, k, this.height);
-        if(entry != null) {
+        if (entry == null) {
+            return null;
+        } else if (entry.isInDisk) { // means on the disk
+            try {
+                Value returnValue = memory.deserialize(k);
+                memory.delete(k);
+                entry.isInDisk = false; // since we just retrieved it
+                return returnValue;
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+
+        } else { // if value is not in the disk
             return entry.val;
         }
-        return null;
     }
 
     private Entry<Key, Value> get(Node<Key, Value> currentNode, Key key, int height) {
@@ -121,8 +134,16 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
         //if the key already exists in the b-tree, simply replace the value
         Entry<Key, Value> alreadyThere = this.get(this.root, k, this.height);
         if(alreadyThere != null) {
+            if (alreadyThere.isInDisk) { // if there is a previous thing in the disk
+                try {
+                    memory.delete(k);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
             Value returnVal = alreadyThere.val;
             alreadyThere.val = v;
+            alreadyThere.isInDisk = false; //just in case, since now it is in local memory
             return returnVal;
         }
 
@@ -239,11 +260,64 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
 
     @Override
     public void moveToDisk(Key k) throws Exception {
+        if (k == null) {
+            throw new IllegalArgumentException("key is null");
+        }
+        Value value = get(k);
+        if (value == null) {
+            throw new IllegalStateException("Value is not in memory");
+        }
+        // what I need to do is first put this in the persistence manager
+        memory.serialize(k, value);
+        // then I need to replace its node in the B-Tree with a reference node
+        changeNodeToReference(root, k, this.height);
+        // then I need to add to get that if it reaches a reference node, to retrieve it from
+            // memory and delete it in memory
+        // then I need to add to put that if it reaches a reference node, to delete the memory
+            // before putting it here
+    }
 
+    /**
+     *
+     * @param currentNode we are looking at
+     * @param key that we are looking for
+     * @param height that we are currently at, where root is considered the max height
+     */
+    private void changeNodeToReference(Node<Key, Value> currentNode, Key key, int height) {
+        int j;
+
+        //leaf node
+        if (height == 0) {
+            //find index in currentNode’s entry[] to make entry reference
+            //we look for key < entry.key since we want to leave j
+            //pointing to the slot to insert the new entry, hence we want to find
+            //the first entry in the current node that key is LESS THAN
+            for (j = 0; j < currentNode.entryCount; j++) {
+                if (isEqual(key, currentNode.entries[j].key)) {
+                    currentNode.entries[j] = new Entry<>(key); // change to reference node
+                    return;
+                }
+            }
+
+        } else { // if this is an internal node, and we need to find the next node
+            //find index in node entry array to insert the new entry
+            for (j = 0; j < currentNode.entryCount; j++) {
+                //if (we are at the last key in this node OR the key we
+                //are looking for is less than the next key, i.e. the
+                //desired key must be added to the subtree below the current entry),
+                //then do a recursive call to put on the current entry’s child
+                if ((j + 1 == currentNode.entryCount) || less(key, currentNode.entries[j + 1].key)) {
+                    //increment j (j++) after the call so that a new entry created by a split
+                    //will be inserted in the next slot
+                    changeNodeToReference(currentNode.entries[j].child, key, height);
+                    return;
+                }
+            }
+        }
     }
 
     @Override
     public void setPersistenceManager(PersistenceManager<Key, Value> pm) {
-
+        memory = pm;
     }
 }
