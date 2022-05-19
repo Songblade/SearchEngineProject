@@ -11,7 +11,7 @@ public class DocumentImpl implements Document {
     private String text; // the text of the document, null if not applicable
     private byte[] binaryData; // the data of the document, null if not applicable
     private Map<String, Integer> wordCount;
-    private long lastUseTime;
+    private transient long lastUseTime;
 
     // constructor that uses text
     public DocumentImpl(URI uri, String text) {
