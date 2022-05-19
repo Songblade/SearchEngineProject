@@ -12,7 +12,6 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.nio.file.attribute.FileAttribute;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -46,21 +45,21 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
             // This way, if it has text as a property, it is txt, otherwise it is binary
             if (document.getDocumentBinaryData() == null) {
                 object.addProperty("text", document.getDocumentTxt());
+                // then, I add the map, which I think I will turn into 2 arrays and encode each
+                // we don't need this in bytes because no words
+                JsonArray wordList = new JsonArray();
+                JsonArray wordNumbers = new JsonArray();
+                Map<String, Integer> wordCount = document.getWordMap();
+                for (String word : wordCount.keySet()) {
+                    wordList.add(word);
+                    wordNumbers.add(wordCount.get(word));
+                }
+                object.add("wordCount-words", wordList);
+                object.add("wordCount-numbers", wordNumbers);
             } else {
                 String encodedBytes = DatatypeConverter.printBase64Binary(document.getDocumentBinaryData());
                 object.addProperty("binaryData", encodedBytes);
             }
-
-            // then, I add the map, which I think I will turn into 2 arrays and encode each
-            JsonArray wordList = new JsonArray();
-            JsonArray wordNumbers = new JsonArray();
-            Map<String, Integer> wordCount = document.getWordMap();
-            for (String word : wordCount.keySet()) {
-                wordList.add(word);
-                wordNumbers.add(wordCount.get(word));
-            }
-            object.add("wordCount-words", wordList);
-            object.add("wordCount-numbers", wordNumbers);
 
             return object;
         }
@@ -91,20 +90,20 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
             if (object.has("text")) { // get the right type of doc
                 String text = object.get("text").getAsString();
                 doc = new DocumentImpl(uri, text);
+                // now we need to reconstruct a new Map for no good reason
+                // getting each of the stored arrays
+                JsonArray words = object.getAsJsonArray("wordCount-words");
+                JsonArray numbers = object.getAsJsonArray("wordCount-numbers");
+                Map<String, Integer> wordMap = new HashMap<>();
+                for (int i = 0; i < words.size(); i++) { // unpacking everything
+                    wordMap.put(words.get(i).getAsString(), numbers.get(i).getAsInt());
+                }
+                doc.setWordMap(wordMap);
+                // we don't need this if bytes, because no words
             } else {
                 byte[] bytes = DatatypeConverter.parseBase64Binary(object.get("binaryData").getAsString());
                 doc = new DocumentImpl(uri, bytes);
             }
-
-            // now we need to reconstruct a new Map for no good reason
-            // getting each of the stored arrays
-            JsonArray words = object.getAsJsonArray("wordCount-words");
-            JsonArray numbers = object.getAsJsonArray("wordCount-numbers");
-            Map<String, Integer> wordMap = new HashMap<>();
-            for (int i = 0; i < words.size(); i++) { // unpacking everything
-                wordMap.put(words.get(i).getAsString(), numbers.get(i).getAsInt());
-            }
-            doc.setWordMap(wordMap);
 
             return doc;
         }
@@ -118,13 +117,13 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
 
     @Override
     public void serialize(URI uri, Document val) throws IOException {
-        String fileEndName = uri.getRawPath(); // should get rid of https:\
+        String fileEndName = uri.getAuthority() + uri.getPath(); // should get rid of https:\
         fileEndName += ".json"; // because we are making a json file
         File file = new File(baseDir, fileEndName);
         if (file.exists() && (!file.canRead() || !file.canWrite())) {
             throw new IllegalArgumentException("Cannot read or write in this location");
         }
-        createAllNeededFiles(fileEndName);
+        createAllNeededFiles(file);
         FileWriter writer = new FileWriter(file);
         // I should now be able to write the GSON stuff to the json file// Now I will create the gson to do it
         Gson gson = new GsonBuilder()
@@ -138,10 +137,11 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
     /**
      * Creates all files and directories needed in order to store stuff there
      */
-    private void createAllNeededFiles(String fileName) throws IOException {
-        int lastSlash = fileName.lastIndexOf('/');
+    private void createAllNeededFiles(File fullFile) throws IOException {
+        String fileName = fullFile.getPath();
+        int lastSlash = fileName.lastIndexOf('\\');
         if (lastSlash > 0) {
-            String directoryName = fileName.substring(0, fileName.lastIndexOf('/'));
+            String directoryName = fileName.substring(0, fileName.lastIndexOf('\\'));
             if (!directoryName.isEmpty()) {
                 File directory = new File(directoryName);
                 Files.createDirectories(directory.toPath()); // doesn't throw errors if some directories exist
