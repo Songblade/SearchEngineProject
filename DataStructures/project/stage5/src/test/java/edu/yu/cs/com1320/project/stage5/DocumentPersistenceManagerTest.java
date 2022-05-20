@@ -193,12 +193,70 @@ public class DocumentPersistenceManagerTest {
     // I need more tests, but can't think of them
 
     // tests for delete
-
     // test that when I delete, the file no longer exists
-    // test that can deserialize when directly in the directory
+    @Test
+    public void deleteWorks() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/ouch.json");
+        //assertFalse(file.exists());
+        URI docURI = new URI("https://ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        manager.deserialize(docURI); // can deserialize now
+        manager.delete(docURI);
+        // show how deleted
+        assertFalse(file.exists());
+    }
 
     // tests that when I delete, deserialize no longer works
-    // tests that delete returns true if it worked
-    // tests that delete returns false if the file never existed
+    @Test
+    public void deleteStopsDeserialize() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/ouch.json");
+        //assertFalse(file.exists());
+        URI docURI = new URI("https://ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        manager.deserialize(docURI); // can deserialize now
+        manager.delete(docURI);
+        // show how deleted
+        assertThrows(IllegalArgumentException.class, ()->manager.deserialize(docURI));
+    }
 
+    // tests that delete returns true if it worked
+    @Test
+    public void deleteReturnsTrueIfWorked() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/ouch.json");
+        //assertFalse(file.exists());
+        URI docURI = new URI("https://ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        manager.deserialize(docURI); // can deserialize now
+        assertTrue(manager.delete(docURI));
+    }
+
+    // tests that delete returns false if the file never existed
+    @Test
+    public void deleteReturnsFalseIfNeverExisted() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/JarJarBinks.json");
+        assertFalse(file.exists());
+        URI docURI = new URI("https://ouch");
+        assertFalse(manager.delete(docURI));
+    }
+
+    // tests that delete returns false if the file existed but has been deleted
+    @Test
+    public void deleteReturnsFalseIfDeleted() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/ouch.json");
+        //assertFalse(file.exists());
+        URI docURI = new URI("https://ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        manager.deserialize(docURI); // can deserialize now
+        manager.delete(docURI);
+        // now deleting again returns false
+        assertFalse(manager.delete(docURI));
+    }
 }
