@@ -14,6 +14,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 
 /**
  * created by the document store and given to the BTree via a call to BTree.setPersistenceManager
@@ -117,21 +118,30 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
 
     @Override
     public void serialize(URI uri, Document val) throws IOException {
+        File file = turnURIToFile(uri);
+        createAllNeededFiles(file);
+        FileWriter writer = new FileWriter(file);
+        // I should now be able to write the GSON stuff to the json file// Now I will create the gson to do it
+        Gson gson = setUpGson();
+        // that should have made a gson that does documents right
+        writer.write(gson.toJson(val)); // should write the document to the file
+        writer.close();
+    }
+
+    /**
+     * Turns the URI we are given into a File in the right directory
+     * Also makes sure we can read and write here, if applicable
+     * @param uri given
+     * @return a file in the right directory
+     */
+    private File turnURIToFile(URI uri) {
         String fileEndName = uri.getAuthority() + uri.getPath(); // should get rid of https:\
         fileEndName += ".json"; // because we are making a json file
         File file = new File(baseDir, fileEndName);
         if (file.exists() && (!file.canRead() || !file.canWrite())) {
             throw new IllegalArgumentException("Cannot read or write in this location");
         }
-        createAllNeededFiles(file);
-        FileWriter writer = new FileWriter(file);
-        // I should now be able to write the GSON stuff to the json file// Now I will create the gson to do it
-        Gson gson = new GsonBuilder()
-                .registerTypeAdapter(Document.class, new JsonSerialManager())
-                .create();
-        // that should have made a gson that does documents right
-        writer.write(gson.toJson(val)); // should write the document to the file
-        writer.close();
+        return file;
     }
 
     /**
@@ -153,9 +163,25 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
         }
     }
 
+    private Gson setUpGson() {
+        return new GsonBuilder()
+                .registerTypeAdapter(Document.class, new JsonSerialManager())
+                .create();
+    }
+
     @Override
     public Document deserialize(URI uri) throws IOException {
-        return null;
+        // First, I need to actually get the data
+        File file = turnURIToFile(uri);
+        Scanner fileScanner = new Scanner(file);
+        // it looks like my files only take up one line, so that is what I will take
+        if (!fileScanner.hasNext()) {
+            throw new IllegalStateException("File is empty");
+        }
+        String fileContents = fileScanner.nextLine();
+        // then I need to decode it and build the file, and return it
+        Gson gson = setUpGson();
+        return gson.fromJson(fileContents, Document.class);
     }
 
     @Override

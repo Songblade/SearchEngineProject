@@ -28,15 +28,29 @@ public class DocumentPersistenceManagerTest {
     public DocumentPersistenceManagerTest() {
         File directory = new File("C:/Users/shimm/coding/junk/stage5Tests");
         manager = new DocumentPersistenceManager(directory);
-        if (directory.exists()) { // so we don't get errors when it hasn't been made yet
+        deleteAllFiles(directory);
+    }
+
+    /**
+     * Should recursively delete files in the directory, so I can start with them deleted
+     * @param directory being cleared
+     */
+    private void deleteAllFiles(File directory) {
+        if (directory.exists() && directory.isDirectory()) { // so we don't get errors when it hasn't been made yet
             for (File file : Objects.requireNonNull(directory.listFiles())) {
-                file.delete(); // getting rid of all files
+                if (file.isFile()) {
+                    file.delete(); // getting rid of all files
+                } else if (file.isDirectory()){ // if is directory
+                    deleteAllFiles(file);
+                }
             }
         }
     }
 
+
     // tests for serialize
     // test that when I serialize, there is now a file at this URI (use dif URI from others)
+
     @Test
     public void serializeCreatesFileTxt() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/insideoutdex/ouch.json");
@@ -60,14 +74,23 @@ public class DocumentPersistenceManagerTest {
     }
 
     // Another test that is immediately directory
+    @Test
+    public void serializeCreatesFileImmediateDirectory() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/bigOuchie.json");
+        assertFalse(file.exists());
+        URI docURI = new URI("https://bigOuchie");
+        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+    }
 
     // tests for deserialize
     // test that when I deserialize, the word map, URI, and text are the same as before
-    //@Test
-    public void deserializeReadsFile() throws URISyntaxException, IOException {
-        File file = new File("C:\\Users\\shimm\\coding\\junk\\stage5Tests\\outdex\\ouch.json");
+    @Test
+    public void deserializeReadsTxtFile() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/ouch.json");
         assertFalse(file.exists());
-        URI docURI = new URI("https:\\\\outdex\\ouch");
+        URI docURI = new URI("https://outdex/ouch");
         Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
@@ -75,6 +98,8 @@ public class DocumentPersistenceManagerTest {
 
         assertEquals(docURI, deserialized.getKey());
         assertEquals("Random Text Who Cares", deserialized.getDocumentTxt());
+        assertNull(deserialized.getDocumentBinaryData());
+        assertEquals(0, deserialized.getLastUseTime());
 
         HashMap<String, Integer> wordMap = new HashMap<>();
         wordMap.put("random", 1);
@@ -85,8 +110,83 @@ public class DocumentPersistenceManagerTest {
     }
 
     // same as previous, but for a binary document
+    @Test
+    public void deserializeReadsBinaryFile() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/ouch.json");
+        assertFalse(file.exists());
+        URI docURI = new URI("https://outdex/ouch");
+        byte[] bytes = {(byte) 0, (byte) 1, (byte) 2, (byte) 3};
+        Document newDoc = new DocumentImpl(docURI, bytes);
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        Document deserialized = manager.deserialize(docURI);
+
+        assertEquals(docURI, deserialized.getKey());
+        assertEquals(bytes, deserialized.getDocumentBinaryData());
+        assertNull(deserialized.getDocumentTxt());
+        assertEquals(new HashMap<>(), deserialized.getWordMap());
+        assertEquals(0, deserialized.getLastUseTime());
+    }
+
     // test that even if the document had a time before, getting it deserialization brings it to 0
+    @Test
+    public void deserializeIgnoresTime() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/ouch.json");
+        assertFalse(file.exists());
+        URI docURI = new URI("https://outdex/ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        newDoc.setLastUseTime(50000);
+        assertEquals(50000, newDoc.getLastUseTime());
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        Document deserialized = manager.deserialize(docURI);
+
+        assertEquals(0, deserialized.getLastUseTime());
+    }
+
     // test that can deserialize a second time, that deserialization doesn't destroy the file
+    @Test
+    public void deserializeWorksTwice() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/ouch.json");
+        assertFalse(file.exists());
+        URI docURI = new URI("https://outdex/ouch");
+        byte[] bytes = {(byte) 0, (byte) 1, (byte) 2, (byte) 3};
+        Document newDoc = new DocumentImpl(docURI, bytes);
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        Document deserialized2 = manager.deserialize(docURI);
+
+        assertEquals(docURI, deserialized2.getKey());
+        assertEquals(bytes, deserialized2.getDocumentBinaryData());
+        assertNull(deserialized2.getDocumentTxt());
+        assertEquals(new HashMap<>(), deserialized2.getWordMap());
+        assertEquals(0, deserialized2.getLastUseTime());
+    }
+
+    // test that can deserialize when directly in the directory
+    @Test
+    public void deserializeWorksDirectlyInDirectory() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/ouch.json");
+        assertFalse(file.exists());
+        URI docURI = new URI("https://ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        Document deserialized = manager.deserialize(docURI);
+
+        assertEquals(docURI, deserialized.getKey());
+        assertEquals("Random Text Who Cares", deserialized.getDocumentTxt());
+        assertNull(deserialized.getDocumentBinaryData());
+        assertEquals(0, deserialized.getLastUseTime());
+
+        HashMap<String, Integer> wordMap = new HashMap<>();
+        wordMap.put("random", 1);
+        wordMap.put("text", 1);
+        wordMap.put("who", 1);
+        wordMap.put("cares", 1);
+        assertEquals(wordMap, deserialized.getWordMap());
+    }
+
     // I need more tests, but can't think of them
 
     // tests for remove
