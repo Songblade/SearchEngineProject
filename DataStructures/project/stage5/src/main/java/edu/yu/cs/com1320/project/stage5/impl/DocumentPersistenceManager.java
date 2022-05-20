@@ -1,6 +1,7 @@
 package edu.yu.cs.com1320.project.stage5.impl;
 
 import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import edu.yu.cs.com1320.project.stage5.Document;
 import edu.yu.cs.com1320.project.stage5.PersistenceManager;
 import jakarta.xml.bind.DatatypeConverter;
@@ -12,7 +13,6 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -38,6 +38,10 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
             // so, first I create a JsonObject to return
             JsonObject object = new JsonObject();
             // then, I add the uri, which I will do as a String, since that makes it easier
+            /* All this was code that I planned on using
+                But for some reason Json just ignores my code and serializes it by looking at every field
+                not marked transient itself and saving the document accordingly
+                Since it is saving it in a nice way, I will just listen to it and ignore this
             object.addProperty("uri", document.getKey().toString());
             // then, I add the string, or null
             // then, I add the byte array, or null
@@ -61,6 +65,7 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
                 String encodedBytes = DatatypeConverter.printBase64Binary(document.getDocumentBinaryData());
                 object.addProperty("binaryData", encodedBytes);
             }
+            //*/
 
             return object;
         }
@@ -79,6 +84,7 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
             JsonObject object = (JsonObject) element;
 
             Document doc;
+
             URI uri = null;
             try {
                 uri = new URI(object.get("uri").getAsString());
@@ -88,12 +94,18 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
             if (uri == null) {
                 throw new JsonParseException("Really a problem with your URI, but Java is being annoying");
             }
+            Gson gson = new DocumentPersistenceManager(null).setUpGson(); // will need it to decode
             if (object.has("text")) { // get the right type of doc
                 String text = object.get("text").getAsString();
                 doc = new DocumentImpl(uri, text);
+                // the following line should extract the wordCount
+                Map<String, Integer> wordCount = gson.fromJson(object.get("wordCount"), new TypeToken<Map<String, Integer>>(){}.getType());
+                doc.setWordMap(wordCount);
                 // now we need to reconstruct a new Map for no good reason
                 // getting each of the stored arrays
-                JsonArray words = object.getAsJsonArray("wordCount-words");
+                // this is my own way of doing things, back when I thought that it would actually
+                    // serialize it the way I wanted
+                /*JsonArray words = object.getAsJsonArray("wordCount-words");
                 JsonArray numbers = object.getAsJsonArray("wordCount-numbers");
                 Map<String, Integer> wordMap = new HashMap<>();
                 for (int i = 0; i < words.size(); i++) { // unpacking everything
@@ -101,13 +113,16 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
                 }
                 doc.setWordMap(wordMap);
                 // we don't need this if bytes, because no words
+                 */
             } else {
-                byte[] bytes = DatatypeConverter.parseBase64Binary(object.get("binaryData").getAsString());
+                //byte[] bytes = DatatypeConverter.parseBase64Binary(object.get("binaryData").toString());
+                byte[] bytes = gson.fromJson(object.get("binaryData"), byte[].class);
                 doc = new DocumentImpl(uri, bytes);
             }
 
             return doc;
         }
+
     }
 
     private File baseDir; // the location where all the files are

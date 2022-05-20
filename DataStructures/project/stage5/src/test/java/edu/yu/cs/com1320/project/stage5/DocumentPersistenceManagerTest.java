@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -28,7 +29,7 @@ public class DocumentPersistenceManagerTest {
     public DocumentPersistenceManagerTest() {
         File directory = new File("C:/Users/shimm/coding/junk/stage5Tests");
         manager = new DocumentPersistenceManager(directory);
-        deleteAllFiles(directory);
+        //deleteAllFiles(directory);
     }
 
     /**
@@ -42,6 +43,7 @@ public class DocumentPersistenceManagerTest {
                     file.delete(); // getting rid of all files
                 } else if (file.isDirectory()){ // if is directory
                     deleteAllFiles(file);
+                    file.delete(); // since now we can, because its files are deleted
                 }
             }
         }
@@ -54,7 +56,7 @@ public class DocumentPersistenceManagerTest {
     @Test
     public void serializeCreatesFileTxt() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/insideoutdex/ouch.json");
-        assertFalse(file.exists());
+        //assertFalse(file.exists());
         URI docURI = new URI("https://insideoutdex/ouch");
         Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
         manager.serialize(docURI, newDoc);
@@ -65,7 +67,7 @@ public class DocumentPersistenceManagerTest {
     @Test
     public void serializeCreatesFileBinary() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/ouch.json");
-        assertFalse(file.exists());
+        //assertFalse(file.exists());
         URI docURI = new URI("https://outdex/ouch");
         byte[] bytes = {(byte) 0, (byte) 1, (byte) 2, (byte) 3};
         Document newDoc = new DocumentImpl(docURI, bytes);
@@ -77,7 +79,7 @@ public class DocumentPersistenceManagerTest {
     @Test
     public void serializeCreatesFileImmediateDirectory() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/bigOuchie.json");
-        assertFalse(file.exists());
+        //assertFalse(file.exists());
         URI docURI = new URI("https://bigOuchie");
         Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
         manager.serialize(docURI, newDoc);
@@ -89,7 +91,7 @@ public class DocumentPersistenceManagerTest {
     @Test
     public void deserializeReadsTxtFile() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/ouch.json");
-        assertFalse(file.exists());
+        //assertFalse(file.exists());
         URI docURI = new URI("https://outdex/ouch");
         Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
         manager.serialize(docURI, newDoc);
@@ -113,7 +115,7 @@ public class DocumentPersistenceManagerTest {
     @Test
     public void deserializeReadsBinaryFile() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/ouch.json");
-        assertFalse(file.exists());
+        //assertFalse(file.exists());
         URI docURI = new URI("https://outdex/ouch");
         byte[] bytes = {(byte) 0, (byte) 1, (byte) 2, (byte) 3};
         Document newDoc = new DocumentImpl(docURI, bytes);
@@ -122,7 +124,8 @@ public class DocumentPersistenceManagerTest {
         Document deserialized = manager.deserialize(docURI);
 
         assertEquals(docURI, deserialized.getKey());
-        assertEquals(bytes, deserialized.getDocumentBinaryData());
+        assertArrayEquals(bytes, deserialized.getDocumentBinaryData(), "Should have " + Arrays.toString(bytes)
+            + ", have " + Arrays.toString(deserialized.getDocumentBinaryData()));
         assertNull(deserialized.getDocumentTxt());
         assertEquals(new HashMap<>(), deserialized.getWordMap());
         assertEquals(0, deserialized.getLastUseTime());
@@ -132,7 +135,7 @@ public class DocumentPersistenceManagerTest {
     @Test
     public void deserializeIgnoresTime() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/ouch.json");
-        assertFalse(file.exists());
+        //assertFalse(file.exists());
         URI docURI = new URI("https://outdex/ouch");
         Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
         newDoc.setLastUseTime(50000);
@@ -148,7 +151,7 @@ public class DocumentPersistenceManagerTest {
     @Test
     public void deserializeWorksTwice() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/ouch.json");
-        assertFalse(file.exists());
+        //assertFalse(file.exists());
         URI docURI = new URI("https://outdex/ouch");
         byte[] bytes = {(byte) 0, (byte) 1, (byte) 2, (byte) 3};
         Document newDoc = new DocumentImpl(docURI, bytes);
@@ -157,7 +160,7 @@ public class DocumentPersistenceManagerTest {
         Document deserialized2 = manager.deserialize(docURI);
 
         assertEquals(docURI, deserialized2.getKey());
-        assertEquals(bytes, deserialized2.getDocumentBinaryData());
+        assertArrayEquals(bytes, deserialized2.getDocumentBinaryData());
         assertNull(deserialized2.getDocumentTxt());
         assertEquals(new HashMap<>(), deserialized2.getWordMap());
         assertEquals(0, deserialized2.getLastUseTime());
@@ -167,7 +170,7 @@ public class DocumentPersistenceManagerTest {
     @Test
     public void deserializeWorksDirectlyInDirectory() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/ouch.json");
-        assertFalse(file.exists());
+        //assertFalse(file.exists());
         URI docURI = new URI("https://ouch");
         Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
         manager.serialize(docURI, newDoc);
@@ -189,8 +192,11 @@ public class DocumentPersistenceManagerTest {
 
     // I need more tests, but can't think of them
 
-    // tests for remove
+    // tests for delete
+
     // test that when I delete, the file no longer exists
+    // test that can deserialize when directly in the directory
+
     // tests that when I delete, deserialize no longer works
     // tests that delete returns true if it worked
     // tests that delete returns false if the file never existed
