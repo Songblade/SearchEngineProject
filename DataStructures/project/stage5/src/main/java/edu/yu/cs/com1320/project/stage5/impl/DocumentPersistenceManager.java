@@ -4,7 +4,7 @@ import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import edu.yu.cs.com1320.project.stage5.Document;
 import edu.yu.cs.com1320.project.stage5.PersistenceManager;
-import jakarta.xml.bind.DatatypeConverter;
+//import jakarta.xml.bind.DatatypeConverter;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -188,12 +188,16 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
     public Document deserialize(URI uri) throws IOException {
         // First, I need to actually get the data
         File file = turnURIToFile(uri);
+        if (!file.exists()) {
+            throw new IllegalArgumentException("File doesn't exist");
+        }
         Scanner fileScanner = new Scanner(file);
         // it looks like my files only take up one line, so that is what I will take
         if (!fileScanner.hasNext()) {
             throw new IllegalStateException("File is empty");
         }
         String fileContents = fileScanner.nextLine();
+        fileScanner.close(); // should stop some problems
         // then I need to decode it and build the file, and return it
         Gson gson = setUpGson();
         return gson.fromJson(fileContents, Document.class);
@@ -201,6 +205,10 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
 
     @Override
     public boolean delete(URI uri) throws IOException {
-        return false;
+        File file = turnURIToFile(uri);
+        if (file.isDirectory()) {
+            throw new IllegalArgumentException("This is a directory, those aren't stored for you");
+        }
+        return file.delete(); // should return false if doesn't exist
     }
 }
