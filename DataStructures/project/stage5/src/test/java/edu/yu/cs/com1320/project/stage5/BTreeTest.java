@@ -13,11 +13,17 @@ public class BTreeTest {
     // Now I will need to figure out all the things that I need to test
     // I am having a hard time thinking of tests, which is weird, let's do these and hope I didn't miss anything
 
+    private BTree<Integer, String> tree;
+
+    public BTreeTest() {
+        tree = new BTreeImpl<>();
+    }
+
+
     // tests for put and get
     // I need to make sure I can put and get a bunch of times without anything breaking
     @Test
     public void canPutAndGetABunchOfTimes() {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         for (int i = 0; i < 1000000; i++) {
             tree.put(i, "" + i);
         }
@@ -32,7 +38,6 @@ public class BTreeTest {
     // test get returns null if this value isn't in the tree
     @Test
     public void testGetReturnsNullIfNotThere() {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         tree.put(3, "Cheese");
         assertNull(tree.get(4));
         tree.put(3, null);
@@ -42,7 +47,6 @@ public class BTreeTest {
     // test put returns null if this is the first one
     @Test
     public void testPutReturnsNull() {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         assertNull(tree.put(3, "Cheese"));
         assertNull(tree.put(4, "Smoked Cheese"));
     }
@@ -50,7 +54,6 @@ public class BTreeTest {
     // test can put to replace
     @Test
     public void testPutCanReplace() {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         tree.put(3, "Cheese");
         tree.put(4, "Smoked cheese");
         assertEquals("Cheese", tree.get(3));
@@ -61,7 +64,6 @@ public class BTreeTest {
     // test put to replace gives back what was deleted
     @Test
     public void testPutReplaceReturnsPrevious() {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         tree.put(3, "Cheese");
         tree.put(4, "Smoked cheese");
         assertEquals("Cheese", tree.put(3, "Cheddar"));
@@ -70,7 +72,6 @@ public class BTreeTest {
     // test can put null to delete
     @Test
     public void testPutNullDeletes() {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         tree.put(3, "Cheese");
         tree.put(4, "Smoked cheese");
         assertEquals("Cheese", tree.get(3));
@@ -81,7 +82,6 @@ public class BTreeTest {
     // test put null to delete gives back what was deleted
     @Test
     public void testPutNullReturns() {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         tree.put(3, "Cheese");
         tree.put(4, "Smoked cheese");
         assertEquals("Cheese", tree.get(3));
@@ -92,7 +92,6 @@ public class BTreeTest {
     // test that move to disk actually gets there
     @Test
     public void moveToDiskGetsItThere() throws Exception {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         TestManager<Integer, String> manager = new TestManager<>();
         tree.put(3, "Cheese");
         tree.put(4, "Smoked cheese");
@@ -105,7 +104,6 @@ public class BTreeTest {
     // I need to make sure I can move to disk and get still works
     @Test
     public void moveToDiskGetBringsBack() throws Exception {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         TestManager<Integer, String> manager = new TestManager<>();
         tree.put(3, "Cheese");
         tree.put(4, "Smoked cheese");
@@ -119,7 +117,6 @@ public class BTreeTest {
     // When I get from the disk, it is no longer in the disk (using my own persistence manager)
     @Test
     public void moveToDiskGetNoLongerOnDisk() throws Exception {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         TestManager<Integer, String> manager = new TestManager<>();
         tree.put(3, "Cheese");
         tree.put(4, "Smoked cheese");
@@ -134,7 +131,6 @@ public class BTreeTest {
     // When I put to something in the disk, it is no longer in the disk
     @Test
     public void moveToDiskPutBringsBack() throws Exception {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         TestManager<Integer, String> manager = new TestManager<>();
         tree.put(3, "Cheese");
         tree.put(4, "Smoked cheese");
@@ -149,7 +145,6 @@ public class BTreeTest {
     // testing that if move to disk and delete, get works correctly
     @Test
     public void moveToDiskDeleteWorks() throws Exception {
-        BTree<Integer, String> tree = new BTreeImpl<>();
         TestManager<Integer, String> manager = new TestManager<>();
         tree.put(3, "Cheese");
         tree.put(4, "Smoked cheese");
