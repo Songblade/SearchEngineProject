@@ -206,6 +206,9 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
     @Override
     public boolean delete(URI uri) throws IOException {
         File file = turnURIToFile(uri);
+        if (!file.exists()) {
+            return false; // because we can't delete it
+        }
         if (file.isDirectory()) {
             throw new IllegalArgumentException("This is a directory, those aren't stored for you");
         }

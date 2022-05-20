@@ -241,7 +241,7 @@ public class DocumentPersistenceManagerTest {
     public void deleteReturnsFalseIfNeverExisted() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/JarJarBinks.json");
         assertFalse(file.exists());
-        URI docURI = new URI("https://ouch");
+        URI docURI = new URI("https://JarJarBinks");
         assertFalse(manager.delete(docURI));
     }
 
