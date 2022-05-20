@@ -150,7 +150,7 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
      * @return a file in the right directory
      */
     private File turnURIToFile(URI uri) {
-        String fileEndName = uri.getAuthority() == null ? uri.getAuthority() : "" + uri.getPath(); // should get rid of https:/
+        String fileEndName = (uri.getAuthority() != null ? uri.getAuthority() : "") + uri.getPath(); // should get rid of https:/
         fileEndName += ".json"; // because we are making a json file
         File file = new File(baseDir, fileEndName);
         if (file.exists() && (!file.canRead() || !file.canWrite())) {

@@ -97,20 +97,20 @@ public class DocumentPersistenceManagerTest {
         assertTrue(file.exists());
     }
 
-    // and when doesn't have anything before //
+    // and that it works when starts just with /
     @Test
-    public void serializeWorksNoScheme() throws URISyntaxException, IOException {
+    public void serializeWorksOneSlash() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/reallyInsecure/ouch.json");
         //assertFalse(file.exists());
-        URI docURI = new URI("/reallyInsecure/ouch");
+        URI docURI = new URI("https:/reallyInsecure/ouch");
         Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
     }
 
-    // and that it works when starts just with /
+    // and when doesn't have anything before //
     @Test
-    public void serializeWorksOneSlash() throws URISyntaxException, IOException {
+    public void serializeWorksNoScheme() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/reallyInsecure/hotStuff/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("//reallyInsecure/hotStuff/ouch");
