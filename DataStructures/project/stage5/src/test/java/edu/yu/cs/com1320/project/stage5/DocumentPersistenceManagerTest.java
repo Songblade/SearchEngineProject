@@ -86,6 +86,39 @@ public class DocumentPersistenceManagerTest {
         assertTrue(file.exists());
     }
 
+    // tests that serialize works when only http
+    @Test
+    public void serializeWorksDifScheme() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/insecure/ouch.json");
+        //assertFalse(file.exists());
+        URI docURI = new URI("http://insecure/ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+    }
+
+    // and when doesn't have anything before //
+    @Test
+    public void serializeWorksNoScheme() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/reallyInsecure/ouch.json");
+        //assertFalse(file.exists());
+        URI docURI = new URI("/reallyInsecure/ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+    }
+
+    // and that it works when starts just with /
+    @Test
+    public void serializeWorksOneSlash() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/reallyInsecure/hotStuff/ouch.json");
+        //assertFalse(file.exists());
+        URI docURI = new URI("//reallyInsecure/hotStuff/ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+    }
+
     // tests for deserialize
     // test that when I deserialize, the word map, URI, and text are the same as before
     @Test
