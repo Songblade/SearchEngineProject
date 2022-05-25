@@ -14,7 +14,7 @@ public class DocumentTest {
     // test that getWordMap returns the word map
     @Test
     public void getWordMapReturns() throws URISyntaxException {
-        Document doc = new DocumentImpl(new URI("https://stuff/stuff.com"), "I love bananas and I love them now!");
+        Document doc = new DocumentImpl(new URI("https://stuff/stuff.com"), "I love bananas and I love them now!", null);
 
         HashMap<String, Integer> wordMap = new HashMap<>();
         wordMap.put("i", 2);
@@ -30,7 +30,7 @@ public class DocumentTest {
     // test that if we set the wordMap later, that is what we get back
     @Test
     public void setWordMapWorks() throws URISyntaxException {
-        Document doc = new DocumentImpl(new URI("https://stuff/stuff.com"), "text doesn't matter here");
+        Document doc = new DocumentImpl(new URI("https://stuff/stuff.com"), "text doesn't matter here", null);
 
         HashMap<String, Integer> wordMap = new HashMap<>();
         wordMap.put("i", 2);
@@ -40,6 +40,21 @@ public class DocumentTest {
         wordMap.put("them", 1);
         wordMap.put("now", 1);
         doc.setWordMap(wordMap);
+
+        assertEquals(wordMap, doc.getWordMap());
+    }
+
+    @Test
+    public void newConstructorWorks() throws URISyntaxException {
+        HashMap<String, Integer> wordMap = new HashMap<>();
+        wordMap.put("i", 2);
+        wordMap.put("love", 2);
+        wordMap.put("bananas", 1);
+        wordMap.put("and", 1);
+        wordMap.put("them", 1);
+        wordMap.put("now", 1);
+
+        Document doc = new DocumentImpl(new URI("https://stuff/stuff.com"), "text doesn't matter here", wordMap);
 
         assertEquals(wordMap, doc.getWordMap());
     }

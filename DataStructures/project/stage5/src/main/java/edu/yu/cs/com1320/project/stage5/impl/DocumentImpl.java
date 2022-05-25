@@ -13,8 +13,13 @@ public class DocumentImpl implements Document {
     private Map<String, Integer> wordCount;
     private transient long lastUseTime;
 
-    // constructor that uses text
-    public DocumentImpl(URI uri, String text) {
+    /**
+     * Creates a text document
+     * @param uri where the document is stored
+     * @param text contained in the document
+     * @param wordCount of the document, or null if you want me to generate it for you
+     */
+    public DocumentImpl(URI uri, String text, Map<String, Integer> wordCount) {
         validateURI(uri);
         if (text == null) {
             throw new IllegalArgumentException("text is null");
@@ -24,7 +29,11 @@ public class DocumentImpl implements Document {
         }
         this.uri = uri;
         this.text = text;
-        generateWordCount();
+        if (wordCount == null) {
+            generateWordCount();
+        } else {
+            this.wordCount = wordCount;
+        }
     }
 
     // creates the hashmap that contains the wordcount
@@ -60,6 +69,11 @@ public class DocumentImpl implements Document {
         return newWord;
     }
 
+    /**
+     * Creates a binary document
+     * @param uri where the document is stored
+     * @param binaryData that the document holds
+     */
     public DocumentImpl(URI uri, byte[] binaryData) {
         validateURI(uri);
         if (binaryData == null) {

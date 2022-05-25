@@ -45,14 +45,14 @@ public class DocumentAPITest {
     public void stage4GetLastUseTimeExists()throws URISyntaxException {
         URI uri = new URI("https://this.com");
         try {
-            new DocumentImpl(uri, "hi").getLastUseTime();
+            new DocumentImpl(uri, "hi", null).getLastUseTime();
         } catch (RuntimeException e) {}
     }
     @Test
     public void stage4SetLastUseTimeExists()throws URISyntaxException {
         URI uri = new URI("https://this.com");
         try {
-            new DocumentImpl(uri, "hi").setLastUseTime(100);
+            new DocumentImpl(uri, "hi", null).setLastUseTime(100);
         } catch (RuntimeException e) {}
     }
 
@@ -61,7 +61,7 @@ public class DocumentAPITest {
     public void stage3WordCountExists() throws URISyntaxException {
         URI uri = new URI("https://this.com");
         try {
-            new DocumentImpl(uri, "hi").wordCount("hi");
+            new DocumentImpl(uri, "hi", null).wordCount("hi");
         } catch (RuntimeException e) {}
     }
 
@@ -90,7 +90,7 @@ public class DocumentAPITest {
     public void constructor1Exists() throws URISyntaxException {
         URI uri = new URI("https://this.com");
         try {
-            new DocumentImpl(uri, "hi");
+            new DocumentImpl(uri, "hi", null);
         } catch (RuntimeException e) {}
     }
 
@@ -115,7 +115,7 @@ public class DocumentAPITest {
     public void getDocumentTxtExists() throws URISyntaxException{
         URI uri = new URI("https://this.com");
         try {
-            new DocumentImpl(uri, "hi").getDocumentTxt();
+            new DocumentImpl(uri, "hi", null).getDocumentTxt();
         } catch (RuntimeException e) {}
     }
 
@@ -123,7 +123,7 @@ public class DocumentAPITest {
     public void getKeyExists() throws URISyntaxException {
         URI uri = new URI("https://this.com");
         try {
-            new DocumentImpl(uri, "hi").getKey();
+            new DocumentImpl(uri, "hi", null).getKey();
         } catch (RuntimeException e) {}
     }
 

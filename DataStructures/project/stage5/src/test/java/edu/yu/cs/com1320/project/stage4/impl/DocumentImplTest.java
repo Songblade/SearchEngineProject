@@ -39,14 +39,14 @@ public class DocumentImplTest {
 
     @Test
     public void stage3WordCount() {
-        DocumentImpl textDocument = new DocumentImpl(this.textUri, this.textString);
+        DocumentImpl textDocument = new DocumentImpl(this.textUri, this.textString, null);
         assertEquals(1, textDocument.wordCount("This"));
         assertEquals(0, textDocument.wordCount("blah"));
     }
 
     @Test
     public void stage3CaseInsensitiveWordCount() {
-        DocumentImpl textDocument = new DocumentImpl(this.textUri, this.textString);
+        DocumentImpl textDocument = new DocumentImpl(this.textUri, this.textString, null);
         assertEquals(1, textDocument.wordCount("this"));
         assertEquals(1, textDocument.wordCount("tHis"));
     }
@@ -54,7 +54,7 @@ public class DocumentImplTest {
     //stage 1 tests
     @Test
     public void testGetTextDocumentAsTxt() {
-        DocumentImpl textDocument = new DocumentImpl(this.textUri, this.textString);
+        DocumentImpl textDocument = new DocumentImpl(this.textUri, this.textString, null);
         assertEquals(this.textString, textDocument.getDocumentTxt());
     }
 
@@ -66,7 +66,7 @@ public class DocumentImplTest {
 
     @Test
     public void testGetTextDocumentTextHashCode() {
-        DocumentImpl textDocument = new DocumentImpl(this.textUri, this.textString);
+        DocumentImpl textDocument = new DocumentImpl(this.textUri, this.textString, null);
         int code = Utils.calculateHashCode(this.textUri, this.textString,null);
         assertEquals(code, textDocument.hashCode());
     }
@@ -80,7 +80,7 @@ public class DocumentImplTest {
 
     @Test
     public void testGetTextDocumentKey() {
-        DocumentImpl textDocument = new DocumentImpl(this.textUri, this.textString);
+        DocumentImpl textDocument = new DocumentImpl(this.textUri, this.textString, null);
         assertEquals(this.textUri, textDocument.getKey());
     }
 

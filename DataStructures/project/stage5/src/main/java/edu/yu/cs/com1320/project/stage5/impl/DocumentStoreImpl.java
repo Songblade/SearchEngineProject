@@ -125,7 +125,7 @@ public class DocumentStoreImpl implements DocumentStore {
         none*/
         byte[] data = input.readAllBytes(); // making the array just big enough to read all the data
         if (format == DocumentFormat.TXT) {
-            return new DocumentImpl(uri, new String(data));
+            return new DocumentImpl(uri, new String(data), null);
         } else { // if the format is binary
             return new DocumentImpl(uri, data);
         }

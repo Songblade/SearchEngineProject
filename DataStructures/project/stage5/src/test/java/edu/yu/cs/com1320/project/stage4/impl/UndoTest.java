@@ -179,7 +179,7 @@ public class UndoTest {
     public void undoAfterOnePut() throws Exception {
         DocumentStoreImpl dsi = createStoreAndPutOne();
         //undo after putting only one doc
-        Document doc1 = new DocumentImpl(this.uri1, this.txt1);
+        Document doc1 = new DocumentImpl(this.uri1, this.txt1, null);
         Document returned1 = dsi.getDocument(this.uri1);
         assertNotNull(returned1,"Did not get a document back after putting it in");
         assertEquals(doc1.getKey(),returned1.getKey(),"Did not get doc1 back");
