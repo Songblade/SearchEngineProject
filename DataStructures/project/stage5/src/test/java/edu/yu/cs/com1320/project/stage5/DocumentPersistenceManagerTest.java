@@ -58,7 +58,7 @@ public class DocumentPersistenceManagerTest {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/insideoutdex/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("https://insideoutdex/ouch");
-        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
     }
@@ -81,7 +81,7 @@ public class DocumentPersistenceManagerTest {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/bigOuchie.json");
         //assertFalse(file.exists());
         URI docURI = new URI("https://bigOuchie");
-        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
     }
@@ -92,7 +92,7 @@ public class DocumentPersistenceManagerTest {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/insecure/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("http://insecure/ouch");
-        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
     }
@@ -103,7 +103,7 @@ public class DocumentPersistenceManagerTest {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/reallyInsecure/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("https:/reallyInsecure/ouch");
-        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
     }
@@ -114,7 +114,7 @@ public class DocumentPersistenceManagerTest {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/reallyInsecure/hotStuff/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("//reallyInsecure/hotStuff/ouch");
-        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text WHo Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
     }
@@ -126,7 +126,7 @@ public class DocumentPersistenceManagerTest {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("https://outdex/ouch");
-        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
         Document deserialized = manager.deserialize(docURI);
@@ -164,13 +164,35 @@ public class DocumentPersistenceManagerTest {
         assertEquals(0, deserialized.getLastUseTime());
     }
 
+    @Test
+    public void deserializeReadsLongBinaryFile() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/longOuch.json");
+        //assertFalse(file.exists());
+        URI docURI = new URI("https://outdex/longOuch");
+        byte[] bytes = new byte[100000];
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = (byte) (i % 256);
+        }
+        Document newDoc = new DocumentImpl(docURI, bytes);
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        Document deserialized = manager.deserialize(docURI);
+
+        assertEquals(docURI, deserialized.getKey());
+        assertArrayEquals(bytes, deserialized.getDocumentBinaryData(), "Should have " + Arrays.toString(bytes)
+                + ", have " + Arrays.toString(deserialized.getDocumentBinaryData()));
+        assertNull(deserialized.getDocumentTxt());
+        assertEquals(new HashMap<>(), deserialized.getWordMap());
+        assertEquals(0, deserialized.getLastUseTime());
+    }
+
     // test that even if the document had a time before, getting it deserialization brings it to 0
     @Test
     public void deserializeIgnoresTime() throws URISyntaxException, IOException {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/outdex/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("https://outdex/ouch");
-        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares", null);
         newDoc.setLastUseTime(50000);
         assertEquals(50000, newDoc.getLastUseTime());
         manager.serialize(docURI, newDoc);
@@ -205,7 +227,7 @@ public class DocumentPersistenceManagerTest {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("https://ouch");
-        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
         Document deserialized = manager.deserialize(docURI);
@@ -232,7 +254,7 @@ public class DocumentPersistenceManagerTest {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("https://ouch");
-        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
         manager.deserialize(docURI); // can deserialize now
@@ -247,7 +269,7 @@ public class DocumentPersistenceManagerTest {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("https://ouch");
-        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
         manager.deserialize(docURI); // can deserialize now
@@ -262,7 +284,7 @@ public class DocumentPersistenceManagerTest {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("https://ouch");
-        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
         manager.deserialize(docURI); // can deserialize now
@@ -284,7 +306,7 @@ public class DocumentPersistenceManagerTest {
         File file = new File("C:/Users/shimm/coding/junk/stage5Tests/ouch.json");
         //assertFalse(file.exists());
         URI docURI = new URI("https://ouch");
-        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
         manager.deserialize(docURI); // can deserialize now
@@ -292,4 +314,17 @@ public class DocumentPersistenceManagerTest {
         // now deleting again returns false
         assertFalse(manager.delete(docURI));
     }
+
+    /*
+    My plans:
+        First I need to fix the serialization so that it makes the byte array change the way he wants
+        I also need to go to Document and make the new constructor
+            And edit every other place that uses the constructor
+        Then I need to make delete also delete all empty folders if necessary
+        Then I will go through DocumentStore to make insertion and deletion use the BTree
+        Then I will make sure that the trie stuff works with the BTree correctly, and doesn't store docs in the trie
+        Then I will make sure that undo works with the BTree correctly
+        Then I will make sure that memory usage works correctly, including all the horrible stuff I am hearing about
+            interacting with the Heap correctly
+     */
 }

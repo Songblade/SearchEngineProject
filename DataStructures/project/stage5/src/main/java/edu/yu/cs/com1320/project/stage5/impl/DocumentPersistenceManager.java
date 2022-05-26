@@ -2,9 +2,11 @@ package edu.yu.cs.com1320.project.stage5.impl;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import edu.yu.cs.com1320.project.stage5.Document;
 import edu.yu.cs.com1320.project.stage5.PersistenceManager;
-//import jakarta.xml.bind.DatatypeConverter;
+import jakarta.xml.bind.DatatypeConverter;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -13,6 +15,7 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -38,10 +41,6 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
             // so, first I create a JsonObject to return
             JsonObject object = new JsonObject();
             // then, I add the uri, which I will do as a String, since that makes it easier
-            /* All this was code that I planned on using
-                But for some reason Json just ignores my code and serializes it by looking at every field
-                not marked transient itself and saving the document accordingly
-                Since it is saving it in a nice way, I will just listen to it and ignore this
             object.addProperty("uri", document.getKey().toString());
             // then, I add the string, or null
             // then, I add the byte array, or null
@@ -50,17 +49,10 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
             // This way, if it has text as a property, it is txt, otherwise it is binary
             if (document.getDocumentBinaryData() == null) {
                 object.addProperty("text", document.getDocumentTxt());
-                // then, I add the map, which I think I will turn into 2 arrays and encode each
+                // then, I add the map
                 // we don't need this in bytes because no words
-                JsonArray wordList = new JsonArray();
-                JsonArray wordNumbers = new JsonArray();
-                Map<String, Integer> wordCount = document.getWordMap();
-                for (String word : wordCount.keySet()) {
-                    wordList.add(word);
-                    wordNumbers.add(wordCount.get(word));
-                }
-                object.add("wordCount-words", wordList);
-                object.add("wordCount-numbers", wordNumbers);
+                Gson gson = new Gson();
+                object.addProperty("wordCount", gson.toJson(document.getWordMap()));
             } else {
                 String encodedBytes = DatatypeConverter.printBase64Binary(document.getDocumentBinaryData());
                 object.addProperty("binaryData", encodedBytes);
@@ -94,35 +86,21 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
             if (uri == null) {
                 throw new JsonParseException("Really a problem with your URI, but Java is being annoying");
             }
-            Gson gson = new DocumentPersistenceManager(null).setUpGson(); // will need it to decode
+            Gson gson = new Gson(); // will need it to decode
             if (object.has("text")) { // get the right type of doc
                 String text = object.get("text").getAsString();
-                doc = new DocumentImpl(uri, text);
                 // the following line should extract the wordCount
-                Map<String, Integer> wordCount = gson.fromJson(object.get("wordCount"), new TypeToken<Map<String, Integer>>(){}.getType());
-                doc.setWordMap(wordCount);
-                // now we need to reconstruct a new Map for no good reason
-                // getting each of the stored arrays
-                // this is my own way of doing things, back when I thought that it would actually
-                    // serialize it the way I wanted
-                /*JsonArray words = object.getAsJsonArray("wordCount-words");
-                JsonArray numbers = object.getAsJsonArray("wordCount-numbers");
-                Map<String, Integer> wordMap = new HashMap<>();
-                for (int i = 0; i < words.size(); i++) { // unpacking everything
-                    wordMap.put(words.get(i).getAsString(), numbers.get(i).getAsInt());
-                }
-                doc.setWordMap(wordMap);
+                Map<String, Integer> wordMap = gson.fromJson(object.get("wordCount"), new TypeToken<Map<String, Integer>>(){}.getType());
+                doc = new DocumentImpl(uri, text, wordMap);
                 // we don't need this if bytes, because no words
-                 */
             } else {
-                //byte[] bytes = DatatypeConverter.parseBase64Binary(object.get("binaryData").toString());
-                byte[] bytes = gson.fromJson(object.get("binaryData"), byte[].class);
+                byte[] bytes = DatatypeConverter.parseBase64Binary(object.get("binaryData").toString());
+                //azbyte[] bytes = gson.fromJson(object.get("binaryData"), byte[].class);
                 doc = new DocumentImpl(uri, bytes);
             }
 
             return doc;
         }
-
     }
 
     private File baseDir; // the location where all the files are
@@ -139,7 +117,7 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
         // I should now be able to write the GSON stuff to the json file// Now I will create the gson to do it
         Gson gson = setUpGson();
         // that should have made a gson that does documents right
-        writer.write(gson.toJson(val)); // should write the document to the file
+        writer.write(gson.toJson(val, Document.class)); // should write the document to the file
         writer.close();
     }
 
@@ -150,7 +128,7 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
      * @return a file in the right directory
      */
     private File turnURIToFile(URI uri) {
-        String fileEndName = (uri.getAuthority() != null ? uri.getAuthority() : "") + uri.getPath(); // should get rid of https:/
+        String fileEndName = uri.getSchemeSpecificPart(); // should get rid of https:/
         fileEndName += ".json"; // because we are making a json file
         File file = new File(baseDir, fileEndName);
         if (file.exists() && (!file.canRead() || !file.canWrite())) {
@@ -189,7 +167,7 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
         // First, I need to actually get the data
         File file = turnURIToFile(uri);
         if (!file.exists()) {
-            throw new IllegalArgumentException("File doesn't exist");
+            return null; // that is what we were told to do
         }
         Scanner fileScanner = new Scanner(file);
         // it looks like my files only take up one line, so that is what I will take
