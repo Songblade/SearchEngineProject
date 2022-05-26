@@ -94,7 +94,6 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
                 // we don't need this if bytes, because no words
             } else {
                 byte[] bytes = DatatypeConverter.parseBase64Binary(object.get("binaryData").toString());
-                //azbyte[] bytes = gson.fromJson(object.get("binaryData"), byte[].class);
                 doc = new DocumentImpl(uri, bytes);
             }
 
@@ -189,6 +188,27 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
         if (file.isDirectory()) {
             throw new IllegalArgumentException("This is a directory, those aren't stored for you");
         }
-        return file.delete(); // should return false if doesn't exist
+        boolean didDelete = file.delete(); // should return false if doesn't exist
+        deleteFolders(uri.getSchemeSpecificPart());
+        return didDelete;
+    }
+
+    /**
+     * Recursively deletes all folders that aren't empty
+     * @param fileName the scheme-specific part of the file
+     */
+    private void deleteFolders(String fileName) {
+        if (fileName.indexOf('/') == -1) { // if this is the document, or we finished the last folder
+            return;
+        }
+        String nextFolderName = fileName.substring(0, fileName.lastIndexOf("/"));
+        File nextFolder = new File(baseDir, nextFolderName);
+        if (!nextFolder.isDirectory()) {
+            throw new IllegalStateException("You have a file in a file. Something is wrong");
+        }
+        if (nextFolder.listFiles().length == 0) {
+            nextFolder.delete();
+            deleteFolders(nextFolderName);
+        }
     }
 }

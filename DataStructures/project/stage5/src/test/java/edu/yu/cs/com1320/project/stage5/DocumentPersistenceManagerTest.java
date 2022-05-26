@@ -318,13 +318,13 @@ public class DocumentPersistenceManagerTest {
     // tests that delete also deletes empty folders
     @Test
     public void deleteDeletesFolders() throws URISyntaxException, IOException {
-        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/otherwiseEmpty/ouch.json");
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/folderdex/otherwiseEmpty/ouch.json");
         //assertFalse(file.exists());
-        URI docURI = new URI("https://ouch");
+        URI docURI = new URI("https://folderdex/otherwiseEmpty/ouch");
         Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares", null);
         manager.serialize(docURI, newDoc);
         assertTrue(file.exists());
-        File folder = new File("C:/Users/shimm/coding/junk/stage5Tests/otherwiseEmpty");
+        File folder = new File("C:/Users/shimm/coding/junk/stage5Tests/folderdex");
         assertTrue(folder.exists());
 
         manager.delete(docURI);
@@ -334,9 +334,34 @@ public class DocumentPersistenceManagerTest {
         assertFalse(folder.exists());
     }
 
+    @Test
+    public void deleteDeletesFoldersWhenNotOccupied() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/foldex/otherwiseEmpty/ouch.json");
+        //assertFalse(file.exists());
+        URI docURI = new URI("https://foldex/otherwiseEmpty/ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares", null);
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        File folder = new File("C:/Users/shimm/coding/junk/stage5Tests/foldex/otherwiseEmpty");
+        assertTrue(folder.exists());
+        File deepFile = new File("C:/Users/shimm/coding/junk/stage5Tests/foldex");
+        assertTrue(deepFile.exists());
+
+        // add a second doc
+        URI docURI2 = new URI("https://foldex/notEmpty/ouch");
+        Document newDoc2 = new DocumentImpl(docURI, "Random Text Who Cares", null);
+        manager.serialize(docURI2, newDoc2);
+
+        manager.delete(docURI);
+        // show how deleted
+        assertFalse(file.exists());
+
+        assertFalse(folder.exists()); // otherwiseEmpty should be deleted
+        assertTrue(deepFile.exists()); // but not foldex
+    }
+
     /*
     My plans:
-        Then I need to make delete also delete all empty folders if necessary
         Then I will go through DocumentStore to make insertion and deletion use the BTree
         Then I will make sure that the trie stuff works with the BTree correctly, and doesn't store docs in the trie
         Then I will make sure that undo works with the BTree correctly
