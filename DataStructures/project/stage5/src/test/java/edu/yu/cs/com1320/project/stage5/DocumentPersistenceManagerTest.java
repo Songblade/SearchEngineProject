@@ -315,11 +315,27 @@ public class DocumentPersistenceManagerTest {
         assertFalse(manager.delete(docURI));
     }
 
+    // tests that delete also deletes empty folders
+    @Test
+    public void deleteDeletesFolders() throws URISyntaxException, IOException {
+        File file = new File("C:/Users/shimm/coding/junk/stage5Tests/otherwiseEmpty/ouch.json");
+        //assertFalse(file.exists());
+        URI docURI = new URI("https://ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares", null);
+        manager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        File folder = new File("C:/Users/shimm/coding/junk/stage5Tests/otherwiseEmpty");
+        assertTrue(folder.exists());
+
+        manager.delete(docURI);
+        // show how deleted
+        assertFalse(file.exists());
+
+        assertFalse(folder.exists());
+    }
+
     /*
     My plans:
-        First I need to fix the serialization so that it makes the byte array change the way he wants
-        I also need to go to Document and make the new constructor
-            And edit every other place that uses the constructor
         Then I need to make delete also delete all empty folders if necessary
         Then I will go through DocumentStore to make insertion and deletion use the BTree
         Then I will make sure that the trie stuff works with the BTree correctly, and doesn't store docs in the trie
