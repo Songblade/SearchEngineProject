@@ -275,7 +275,7 @@ public class DocumentPersistenceManagerTest {
         manager.deserialize(docURI); // can deserialize now
         manager.delete(docURI);
         // show how deleted
-        assertThrows(IllegalArgumentException.class, ()->manager.deserialize(docURI));
+        assertNull(manager.deserialize(docURI));
     }
 
     // tests that delete returns true if it worked

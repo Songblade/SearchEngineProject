@@ -2,8 +2,6 @@ package edu.yu.cs.com1320.project.stage5.impl;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
 import edu.yu.cs.com1320.project.stage5.Document;
 import edu.yu.cs.com1320.project.stage5.PersistenceManager;
 import jakarta.xml.bind.DatatypeConverter;
@@ -15,7 +13,6 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -52,7 +49,7 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
                 // then, I add the map
                 // we don't need this in bytes because no words
                 Gson gson = new Gson();
-                object.addProperty("wordCount", gson.toJson(document.getWordMap()));
+                object.addProperty("wordCount", gson.toJson(document.getWordMap(), new TypeToken<Map<String, Integer>>(){}.getType()));
             } else {
                 String encodedBytes = DatatypeConverter.printBase64Binary(document.getDocumentBinaryData());
                 object.addProperty("binaryData", encodedBytes);
@@ -89,8 +86,10 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
             Gson gson = new Gson(); // will need it to decode
             if (object.has("text")) { // get the right type of doc
                 String text = object.get("text").getAsString();
-                // the following line should extract the wordCount
-                Map<String, Integer> wordMap = gson.fromJson(object.get("wordCount"), new TypeToken<Map<String, Integer>>(){}.getType());
+                // the following lines should extract the wordCount
+                // if this works, I am extracting the map from the string, and then getting the map from that
+                String jsonMap = gson.fromJson(object.get("wordCount"), String.class);
+                Map<String, Integer> wordMap = gson.fromJson(jsonMap, new TypeToken<Map<String, Integer>>(){}.getType());
                 doc = new DocumentImpl(uri, text, wordMap);
                 // we don't need this if bytes, because no words
             } else {
