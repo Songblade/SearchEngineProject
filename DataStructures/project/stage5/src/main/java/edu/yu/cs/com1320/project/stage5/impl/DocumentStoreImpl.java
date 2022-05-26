@@ -17,6 +17,7 @@ public class DocumentStoreImpl implements DocumentStore {
     private final Stack<Undoable> commandStack;
     private final Trie<URI> searchTrie;
     private final MinHeap<DocShell> memoryHeap;
+    private final Set<URI> docsInMemory; // a set of documents that are in memory
     private int maxDocCount = -1; // maximum number of docs allowed, -1 means no limit
     private int maxDocBytes = -1; // maximum number of doc bytes allowed, -1 means no limit
     private int docCount; // current number of docs
@@ -104,6 +105,7 @@ public class DocumentStoreImpl implements DocumentStore {
         searchTrie = new TrieImpl<>();
         memoryHeap = new MinHeapImpl<>();
         storeTree.setPersistenceManager(new DocumentPersistenceManager(baseDir));
+        docsInMemory = new HashSet<>();
     }
 
     /**
@@ -258,6 +260,7 @@ public class DocumentStoreImpl implements DocumentStore {
         Document deletedDoc = storeTree.get(memoryHeap.remove().uri);
         // removes from hashtable
         storeTree.moveToDisk(deletedDoc.getKey());
+        docsInMemory.add(deletedDoc.getKey());
         // lowers the doc and byte totals
         docCount--;
         docBytes -= getByteLength(deletedDoc);
@@ -607,11 +610,17 @@ public class DocumentStoreImpl implements DocumentStore {
 
     /**
      * Updates the document's time to the current time, to be used when using it
+     * Or adds it to the heap if it was in memory
      * @param doc to be updated
      */
     private void updateDocTime(Document doc) {
         doc.setLastUseTime(System.nanoTime());
-        memoryHeap.reHeapify(new DocShell(doc.getKey(), storeTree));
+        if (docsInMemory.contains(doc.getKey())) {
+            memoryHeap.insert(new DocShell(doc.getKey(), storeTree));
+            docsInMemory.remove(doc.getKey());
+        } else {
+            memoryHeap.reHeapify(new DocShell(doc.getKey(), storeTree));
+        }
     }
 
 }

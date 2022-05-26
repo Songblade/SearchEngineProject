@@ -204,6 +204,9 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
         }
         String nextFolderName = fileName.substring(0, fileName.lastIndexOf("/"));
         File nextFolder = new File(baseDir, nextFolderName);
+        if (!nextFolder.exists()) { // for those times when the file name is "/"
+            return;
+        }
         if (!nextFolder.isDirectory()) {
             throw new IllegalStateException("You have a file in a file. Something is wrong");
         }

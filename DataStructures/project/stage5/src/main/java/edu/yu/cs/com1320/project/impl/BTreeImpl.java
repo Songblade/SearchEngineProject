@@ -75,6 +75,7 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
                 Value returnValue = memory.deserialize(k);
                 memory.delete(k);
                 entry.isInDisk = false; // since we just retrieved it
+                entry.val = returnValue; // putting it back in memory
                 return returnValue;
             } catch (IOException e) {
                 throw new IllegalStateException(e);
