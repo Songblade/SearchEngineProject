@@ -14,6 +14,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Scanner;
 
 /**
@@ -104,7 +105,7 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
     private File baseDir; // the location where all the files are
 
     public DocumentPersistenceManager(File baseDir){
-        this.baseDir = baseDir;
+        this.baseDir = Objects.requireNonNullElseGet(baseDir, () -> new File(System.getProperty("user.dir")));
     }
 
     @Override
