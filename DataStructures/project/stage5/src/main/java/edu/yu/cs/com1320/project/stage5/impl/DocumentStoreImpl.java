@@ -134,7 +134,6 @@ public class DocumentStoreImpl implements DocumentStore {
             removeDocFromHeap(storeTree.get(uri));
         }
 
-        addDocToHeap(doc);
         //this part deals with the adding the command to the stack
         // since I need the Command added to add the old doc
         Document previousDoc = storeTree.get(uri);
@@ -155,6 +154,7 @@ public class DocumentStoreImpl implements DocumentStore {
         }));
 
         storeTree.put(uri, doc);
+        addDocToHeap(doc);
         putWordsInTrie(doc);
         return oldHash;
     }
