@@ -127,7 +127,7 @@ public class DocumentImpl implements Document {
     /**
      * how many times does the given word appear in the document?
      *
-     * @param word
+     * @param word being searched for
      * @return the number of times the given words appears in the document. If it's a binary document, return 0.
      */
     @Override
@@ -170,10 +170,13 @@ public class DocumentImpl implements Document {
     /**
      * This must set the word to count map during deserialization
      *
-     * @param wordMap
+     * @param wordMap being added
      */
     @Override
     public void setWordMap(Map<String, Integer> wordMap) {
+        if (text == null) {
+            throw new IllegalStateException("This is a binary document, it has no words");
+        }
         wordCount = Collections.unmodifiableMap(wordMap);
     }
 
