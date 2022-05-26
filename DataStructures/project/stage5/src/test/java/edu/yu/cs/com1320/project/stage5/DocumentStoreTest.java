@@ -41,6 +41,12 @@ public class DocumentStoreTest {
         paths[6] = new File(directory, "thisIsDoc7.longDoc.com.json");
         paths[7] = new File(directory, "thisIsDoc8.bytes.com.json");
 
+        for (File file : paths) { // won't delete folders, but will stop tests from breaking
+            if (file.exists()) {
+                file.delete();
+            }
+        }
+
         byte[][] bytes = new byte[8][10];
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 10; j++) {

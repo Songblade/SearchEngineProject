@@ -309,7 +309,7 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
                 if ((j + 1 == currentNode.entryCount) || less(key, currentNode.entries[j + 1].key)) {
                     //increment j (j++) after the call so that a new entry created by a split
                     //will be inserted in the next slot
-                    changeNodeToReference(currentNode.entries[j].child, key, height);
+                    changeNodeToReference(currentNode.entries[j].child, key, height - 1);
                     return;
                 }
             }
