@@ -614,11 +614,15 @@ public class DocumentStoreImpl implements DocumentStore {
      * @param doc to be updated
      */
     private void updateDocTime(Document doc) {
-        doc.setLastUseTime(System.nanoTime());
         if (docsInMemory.contains(doc.getKey())) {
-            memoryHeap.insert(new DocShell(doc.getKey(), storeTree));
+            try {
+                addDocToHeap(doc);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             docsInMemory.remove(doc.getKey());
         } else {
+            doc.setLastUseTime(System.nanoTime());
             memoryHeap.reHeapify(new DocShell(doc.getKey(), storeTree));
         }
     }
