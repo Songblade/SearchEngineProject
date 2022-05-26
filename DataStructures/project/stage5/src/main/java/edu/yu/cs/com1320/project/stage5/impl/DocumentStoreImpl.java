@@ -5,6 +5,7 @@ import edu.yu.cs.com1320.project.stage5.*;
 import edu.yu.cs.com1320.project.*;
 import edu.yu.cs.com1320.project.impl.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -15,18 +16,94 @@ public class DocumentStoreImpl implements DocumentStore {
     private final BTree<URI, Document> storeTree;
     private final Stack<Undoable> commandStack;
     private final Trie<URI> searchTrie;
-    private final MinHeap<Document> memoryHeap;
+    private final MinHeap<DocShell> memoryHeap;
     private int maxDocCount = -1; // maximum number of docs allowed, -1 means no limit
     private int maxDocBytes = -1; // maximum number of doc bytes allowed, -1 means no limit
     private int docCount; // current number of docs
     private int docBytes; // current number of doc bytes
 
+    private static class DocShell implements Comparable<DocShell> {
+
+        private final URI uri;
+        private final BTree<URI, Document> tree;
+
+        private DocShell(URI uri, BTree<URI, Document> tree) {
+            this.uri = uri;
+            this.tree = tree;
+        }
+
+        /**
+         * Compares this object with the specified object for order.  Returns a
+         * negative integer, zero, or a positive integer as this object is less
+         * than, equal to, or greater than the specified object.
+         *
+         * <p>The implementor must ensure
+         * {@code sgn(x.compareTo(y)) == -sgn(y.compareTo(x))}
+         * for all {@code x} and {@code y}.  (This
+         * implies that {@code x.compareTo(y)} must throw an exception iff
+         * {@code y.compareTo(x)} throws an exception.)
+         *
+         * <p>The implementor must also ensure that the relation is transitive:
+         * {@code (x.compareTo(y) > 0 && y.compareTo(z) > 0)} implies
+         * {@code x.compareTo(z) > 0}.
+         *
+         * <p>Finally, the implementor must ensure that {@code x.compareTo(y)==0}
+         * implies that {@code sgn(x.compareTo(z)) == sgn(y.compareTo(z))}, for
+         * all {@code z}.
+         *
+         * <p>It is strongly recommended, but <i>not</i> strictly required that
+         * {@code (x.compareTo(y)==0) == (x.equals(y))}.  Generally speaking, any
+         * class that implements the {@code Comparable} interface and violates
+         * this condition should clearly indicate this fact.  The recommended
+         * language is "Note: this class has a natural ordering that is
+         * inconsistent with equals."
+         *
+         * <p>In the foregoing description, the notation
+         * {@code sgn(}<i>expression</i>{@code )} designates the mathematical
+         * <i>signum</i> function, which is defined to return one of {@code -1},
+         * {@code 0}, or {@code 1} according to whether the value of
+         * <i>expression</i> is negative, zero, or positive, respectively.
+         *
+         * @param o the object to be compared.
+         * @return a negative integer, zero, or a positive integer as this object
+         * is less than, equal to, or greater than the specified object.
+         * @throws NullPointerException if the specified object is null
+         * @throws ClassCastException   if the specified object's type prevents it
+         *                              from being compared to this object.
+         */
+        @Override
+        public int compareTo(DocShell o) {
+            return tree.get(this.uri).compareTo(tree.get(o.uri)); // gets the docs and calls their compareTo
+        } // we were told this was really inefficient but what we had to do
+
+        // overriding equals should make reheapify easier, as I can just make a new DocShell and say reheapify
+        @Override
+        public boolean equals(Object o) {
+            if (o == null) {
+                return false;
+            }
+            if (this == o) {
+                return true;
+            }
+            if (this.getClass() != o.getClass()) {
+                return false;
+            }
+            // equality is determined by URI, once same class
+            return this.uri == ((DocShell)o).uri;
+        }
+    }
+
     //This shouldn't do much, just set up the various fields
     public DocumentStoreImpl() {
+        this(null);
+    }
+
+    public DocumentStoreImpl(File baseDir) {
         storeTree = new BTreeImpl<>();
         commandStack = new StackImpl<>();
         searchTrie = new TrieImpl<>();
         memoryHeap = new MinHeapImpl<>();
+        storeTree.setPersistenceManager(new DocumentPersistenceManager(baseDir));
     }
 
     /**
@@ -68,7 +145,11 @@ public class DocumentStoreImpl implements DocumentStore {
             storeTree.put(uri, previousDoc);
             if (previousDoc != null) {
                 putWordsInTrie(previousDoc);
-                addDocToHeap(previousDoc);
+                try {
+                    addDocToHeap(previousDoc);
+                } catch (IOException e) {
+                    e.printStackTrace(); // I don't like this, but it is being annoying
+                }
             }
             return true;
         }));
@@ -144,15 +225,19 @@ public class DocumentStoreImpl implements DocumentStore {
      * I no longer throw an error here if the doc is too big to fit
      * @param doc being added to the DocumentStore
      */
-    private void addDocToHeap(Document doc) {
+    private void addDocToHeap(Document doc) throws IOException {
         int byteLength = getByteLength(doc);
         doc.setLastUseTime(System.nanoTime());
         docCount++;
         docBytes += byteLength; // gets whatever the byte length is
-        memoryHeap.insert(doc);
+        memoryHeap.insert(new DocShell(doc.getKey(), storeTree));
         while ((maxDocCount != -1 && docCount > maxDocCount) ||
                 (maxDocBytes != -1 && docBytes > maxDocBytes)) {
-            overflowMemory();
+            try {
+                overflowMemory();
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
         }
     }
 
@@ -168,14 +253,13 @@ public class DocumentStoreImpl implements DocumentStore {
     /**
      * Removes every trace of the least-recently used doc from wherever it can be found
      */
-    private void overflowMemory() {
+    private void overflowMemory() throws Exception {
         // removes from memory heap
-        Document deletedDoc = memoryHeap.remove();
-        // removes from trie
-        removeDocFromTrie(deletedDoc);
+        Document deletedDoc = storeTree.get(memoryHeap.remove().uri);
         // removes from hashtable
-        storeTree.put(deletedDoc.getKey(), null);
-        // removes from stack
+        storeTree.moveToDisk(deletedDoc.getKey());
+        // I will leave this until I figure out if I need to remove anything from the stack
+        // I probably don't, but just in case, I won't delete this yet
         Stack<Undoable> helperStack = new StackImpl<>(); // to put stuff on
         // I go through each command on the stack and examine it
         // if it is not the command I am looking for, I put it on helperStack
@@ -202,9 +286,9 @@ public class DocumentStoreImpl implements DocumentStore {
      * @param doc to be removed
      */
     private void removeDocFromHeap(Document doc) {
-        Stack<Document> helperStack = new StackImpl<>(); // to store docs
-        Document foundDoc = memoryHeap.remove();
-        while (!doc.getKey().equals(foundDoc.getKey())) {
+        Stack<DocShell> helperStack = new StackImpl<>(); // to store docs
+        DocShell foundDoc = memoryHeap.remove();
+        while (!doc.getKey().equals(foundDoc.uri)) {
             helperStack.push(foundDoc);
             foundDoc = memoryHeap.remove();
         }
@@ -246,7 +330,11 @@ public class DocumentStoreImpl implements DocumentStore {
             if (maxDocBytes != -1 && getByteLength(previousDoc) > maxDocBytes) {
                 throw new IllegalArgumentException("document size " + getByteLength(previousDoc) + " bytes is greater than limit of " + maxDocBytes);
             }
-            addDocToHeap(previousDoc);
+            try {
+                addDocToHeap(previousDoc);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             // if previousDoc is null, HashTable will delete it for me
             storeTree.put(uri, previousDoc);
             putWordsInTrie(previousDoc);
@@ -465,7 +553,11 @@ public class DocumentStoreImpl implements DocumentStore {
             undoActions.addCommand(new GenericCommand<>(uri, uri1 -> {
                 storeTree.put(uri, doc);
                 putWordsInTrie(doc);
-                addDocToHeap(doc);
+                try {
+                    addDocToHeap(doc);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 return true;
             }));
 
@@ -503,7 +595,11 @@ public class DocumentStoreImpl implements DocumentStore {
         }
         maxDocCount = limit;
         while (docCount > maxDocCount) {
-            overflowMemory();
+            try {
+                overflowMemory();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -519,7 +615,11 @@ public class DocumentStoreImpl implements DocumentStore {
         }
         maxDocBytes = limit;
         while (docBytes > maxDocBytes) {
-            overflowMemory();
+            try {
+                overflowMemory();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -529,7 +629,7 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     private void updateDocTime(Document doc) {
         doc.setLastUseTime(System.nanoTime());
-        memoryHeap.reHeapify(doc);
+        memoryHeap.reHeapify(new DocShell(doc.getKey(), storeTree));
     }
 
 }
