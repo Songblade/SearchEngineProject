@@ -258,24 +258,6 @@ public class DocumentStoreImpl implements DocumentStore {
         Document deletedDoc = storeTree.get(memoryHeap.remove().uri);
         // removes from hashtable
         storeTree.moveToDisk(deletedDoc.getKey());
-        // I will leave this until I figure out if I need to remove anything from the stack
-        // I probably don't, but just in case, I won't delete this yet
-        Stack<Undoable> helperStack = new StackImpl<>(); // to put stuff on
-        // I go through each command on the stack and examine it
-        // if it is not the command I am looking for, I put it on helperStack
-        // if it is the command I am looking for, I remove it, then continue searching
-        // when I get to the bottom of the stack, I restack
-        Undoable command;
-        while (commandStack.peek() != null) {
-            command = commandStack.pop();
-            if (command instanceof GenericCommand) { // if this is a single command
-                checkAndDeleteGenericCommand((GenericCommand<URI>) command, deletedDoc.getKey(), helperStack, false);
-            } else if (command instanceof CommandSet) {
-                checkAndDeleteCommandSet((CommandSet<URI>) command, deletedDoc.getKey(), helperStack, false);
-            }
-        }
-        // when we have gone through the entire stack
-        restackStack(helperStack);
         // lowers the doc and byte totals
         docCount--;
         docBytes -= getByteLength(deletedDoc);
