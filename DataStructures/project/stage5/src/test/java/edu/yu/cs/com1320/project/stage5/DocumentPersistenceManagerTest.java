@@ -360,6 +360,32 @@ public class DocumentPersistenceManagerTest {
         assertTrue(deepFile.exists()); // but not foldex
     }
 
+    // test that you can also serialize and deserialize from user.dir with a null directory
+    @Test
+    public void managerWorksNullDirectory() throws URISyntaxException, IOException {
+        DocumentPersistenceManager defaultManager = new DocumentPersistenceManager(null);
+
+        File file = new File(System.getProperty("user.dir"), "outdex/ouch.json");
+        //assertFalse(file.exists());
+        URI docURI = new URI("https://outdex/ouch");
+        Document newDoc = new DocumentImpl(docURI, "Random Text Who Cares", null);
+        defaultManager.serialize(docURI, newDoc);
+        assertTrue(file.exists());
+        Document deserialized = defaultManager.deserialize(docURI);
+
+        assertEquals(docURI, deserialized.getKey());
+        assertEquals("Random Text Who Cares", deserialized.getDocumentTxt());
+        assertNull(deserialized.getDocumentBinaryData());
+        assertEquals(0, deserialized.getLastUseTime());
+
+        HashMap<String, Integer> wordMap = new HashMap<>();
+        wordMap.put("random", 1);
+        wordMap.put("text", 1);
+        wordMap.put("who", 1);
+        wordMap.put("cares", 1);
+        assertEquals(wordMap, deserialized.getWordMap());
+    }
+
     /*
     My plans:
         Then I will go through DocumentStore to make insertion and deletion use the BTree
