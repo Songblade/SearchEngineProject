@@ -12,10 +12,10 @@ import java.util.*;
 
 public class DocumentStoreImpl implements DocumentStore {
     // must use HashTableImpl to store documents
-    //private HashTable<URI, Document> table;
-    private Stack<Undoable> commandStack;
-    private Trie<Document> searchTrie;
-    private MinHeap<Document> memoryHeap;
+    private final BTree<URI, Document> storeTree;
+    private final Stack<Undoable> commandStack;
+    private final Trie<URI> searchTrie;
+    private final MinHeap<Document> memoryHeap;
     private int maxDocCount = -1; // maximum number of docs allowed, -1 means no limit
     private int maxDocBytes = -1; // maximum number of doc bytes allowed, -1 means no limit
     private int docCount; // current number of docs
@@ -23,7 +23,7 @@ public class DocumentStoreImpl implements DocumentStore {
 
     //This shouldn't do much, just set up the various fields
     public DocumentStoreImpl() {
-        //table = new HashTableImpl<>();
+        storeTree = new BTreeImpl<>();
         commandStack = new StackImpl<>();
         searchTrie = new TrieImpl<>();
         memoryHeap = new MinHeapImpl<>();
@@ -52,28 +52,28 @@ public class DocumentStoreImpl implements DocumentStore {
 
         // if there is a previous doc, we remove it from the trie and heap
         // I'm honestly not sure how no one caught the problem of never removing old docs from tries
-        //if (table.get(uri) != null) {
-          //  removeDocFromTrie(table.get(uri));
-            //removeDocFromHeap(table.get(uri));
-        //}
+        if (storeTree.get(uri) != null) {
+            removeDocFromTrie(storeTree.get(uri));
+            removeDocFromHeap(storeTree.get(uri));
+        }
 
         addDocToHeap(doc);
         //this part deals with the adding the command to the stack
         // since I need the Command added to add the old doc
-        //Document previousDoc = table.get(uri);
+        Document previousDoc = storeTree.get(uri);
         commandStack.push(new GenericCommand<>(uri, (uri1) -> {
             // if previousDoc is null, HashTable will delete it for me
             removeDocFromTrie(doc);
             removeDocFromHeap(doc);
-            //table.put(uri, previousDoc);
-            //if (previousDoc != null) {
-              //  putWordsInTrie(previousDoc);
-                //addDocToHeap(previousDoc);
-            //}
+            storeTree.put(uri, previousDoc);
+            if (previousDoc != null) {
+                putWordsInTrie(previousDoc);
+                addDocToHeap(previousDoc);
+            }
             return true;
         }));
 
-        //table.put(uri, doc);
+        storeTree.put(uri, doc);
         putWordsInTrie(doc);
         return oldHash;
     }
@@ -109,8 +109,7 @@ public class DocumentStoreImpl implements DocumentStore {
 
     // this method returns the hash code of whatever document putDocument will be replacing
     private int getOldHashCode(URI uri) {
-        //return table.get(uri) == null ? 0 : table.get(uri).hashCode();
-        return 0;
+        return storeTree.get(uri) == null ? 0 : storeTree.get(uri).hashCode();
     }
 
     // So I don't have to worry about having a putDocument method too long, I am moving the code that gets a
@@ -136,7 +135,7 @@ public class DocumentStoreImpl implements DocumentStore {
             return;
         }
         for (String word : doc.getWords()) {
-            searchTrie.put(word, doc);
+            searchTrie.put(word, doc.getKey());
         }
     }
 
@@ -175,7 +174,7 @@ public class DocumentStoreImpl implements DocumentStore {
         // removes from trie
         removeDocFromTrie(deletedDoc);
         // removes from hashtable
-        //table.put(deletedDoc.getKey(), null);
+        storeTree.put(deletedDoc.getKey(), null);
         // removes from stack
         Stack<Undoable> helperStack = new StackImpl<>(); // to put stuff on
         // I go through each command on the stack and examine it
@@ -224,7 +223,7 @@ public class DocumentStoreImpl implements DocumentStore {
      */
     @Override
     public Document getDocument(URI uri) {
-        Document doc=null;// = table.get(uri);
+        Document doc = storeTree.get(uri);
         if (doc != null) {
             updateDocTime(doc);
         }
@@ -240,7 +239,7 @@ public class DocumentStoreImpl implements DocumentStore {
         if (uri == null) {
             return false; // not deleting anything, because nothing to delete
         }
-        Document previousDoc = null;//table.get(uri);
+        Document previousDoc = storeTree.get(uri);
         commandStack.push(new GenericCommand<>(uri, (uri1) -> {
             // I don't have to worry about taking out what was previous, because this is delete
             // I need to figure out what to do if the doc is too big
@@ -249,7 +248,7 @@ public class DocumentStoreImpl implements DocumentStore {
             }
             addDocToHeap(previousDoc);
             // if previousDoc is null, HashTable will delete it for me
-            //table.put(uri, previousDoc);
+            storeTree.put(uri, previousDoc);
             putWordsInTrie(previousDoc);
             return true;
         }));
@@ -261,7 +260,7 @@ public class DocumentStoreImpl implements DocumentStore {
         // if there is something to delete
         removeDocFromTrie(previousDoc);
         removeDocFromHeap(previousDoc);
-        //table.put(uri, null);
+        storeTree.put(uri, null);
         return true;
     }
 
@@ -270,7 +269,7 @@ public class DocumentStoreImpl implements DocumentStore {
             return;
         }
         for (String word : doc.getWords()) {
-            searchTrie.delete(word, doc);
+            searchTrie.delete(word, doc.getKey());
         }
     }
 
@@ -291,7 +290,7 @@ public class DocumentStoreImpl implements DocumentStore {
     /**
      * undo the last put or delete that was done with the given URI as its key
      *
-     * @param uri
+     * @param uri being undone
      * @throws IllegalStateException if there are no actions on the command stack for the given URI
      */
     @Override
@@ -387,16 +386,19 @@ public class DocumentStoreImpl implements DocumentStore {
      * Documents are returned in sorted, descending order, sorted by the number of times the keyword appears in the document.
      * Search is CASE INSENSITIVE.
      *
-     * @param keyword
+     * @param keyword being searched for
      * @return a List of the matches. If there are no matches, return an empty list.
      */
     @Override
     public List<Document> search(String keyword) {
-        List<Document> results = searchTrie.getAllSorted(cleanKey(keyword), new DocComparator(keyword));
-        for (Document doc : results) {
+        List<URI> results = searchTrie.getAllSorted(cleanKey(keyword), new DocComparator(keyword, storeTree));
+        List<Document> docs = new ArrayList<>();
+        for (URI uri : results) { // we take the uri, get its doc, update the time, and add it to the return list
+            Document doc = storeTree.get(uri);
             updateDocTime(doc);
+            docs.add(doc);
         }
-        return results;
+        return docs;
     }
 
     // this method turns the key lowercase and gets rid of any symbols
@@ -425,39 +427,43 @@ public class DocumentStoreImpl implements DocumentStore {
      * Documents are returned in sorted, descending order, sorted by the number of times the prefix appears in the document.
      * Search is CASE INSENSITIVE.
      *
-     * @param keywordPrefix
+     * @param keywordPrefix being searched for
      * @return a List of the matches. If there are no matches, return an empty list.
      */
     @Override
     public List<Document> searchByPrefix(String keywordPrefix) {
-        List<Document> results = searchTrie.getAllWithPrefixSorted(cleanKey(keywordPrefix), new PrefixComparator(keywordPrefix));
-        for (Document doc : results) {
+        List<URI> results = searchTrie.getAllWithPrefixSorted(cleanKey(keywordPrefix), new PrefixComparator(keywordPrefix, storeTree));
+        List<Document> docs = new ArrayList<>();
+        for (URI uri : results) {
+            Document doc = storeTree.get(uri);
             updateDocTime(doc);
+            docs.add(doc);
         }
-        return results;
+        return docs;
     }
 
     /**
      * Completely remove any trace of any document which contains the given keyword
      *
-     * @param keyword
+     * @param keyword whose docs are being deleted
      * @return a Set of URIs of the documents that were deleted.
      */
     @Override
     public Set<URI> deleteAll(String keyword) {
-        Set<Document> deleted = searchTrie.deleteAll(cleanKey(keyword));
+        Set<URI> deleted = searchTrie.deleteAll(cleanKey(keyword));
         removeDocs(deleted);
-        return extractURIs(deleted);
+        return deleted;
     }
 
-    // this method deletes a set of documents from both the hashtable and trie
+    // this method deletes a set of documents from the B-Tree, heap, and trie
     // it also creates a CommandSet to undo
-    private void removeDocs(Set<Document> docs) {
+    private void removeDocs(Set<URI> uris) {
         CommandSet<URI> undoActions = new CommandSet<>();
-        for (Document doc : docs) {
+        for (URI uri : uris) {
+            Document doc = storeTree.get(uri);
             // we create an undo for the document, which will add it back to both the HashTable and the Trie
-            undoActions.addCommand(new GenericCommand<>(doc.getKey(), uri1 -> {
-                //table.put(doc.getKey(), doc);
+            undoActions.addCommand(new GenericCommand<>(uri, uri1 -> {
+                storeTree.put(uri, doc);
                 putWordsInTrie(doc);
                 addDocToHeap(doc);
                 return true;
@@ -466,39 +472,29 @@ public class DocumentStoreImpl implements DocumentStore {
             // we delete the doc from our document memory and our word memory
             removeDocFromHeap(doc);
             removeDocFromTrie(doc);
-            //table.put(doc.getKey(), null);
+            storeTree.put(doc.getKey(), null);
         }
         commandStack.push(undoActions);
-    }
-
-    // this turns a Set of Documents to a set of their URIs
-    // There has got to be a way to do this with streams, but I can't figure it out
-    private Set<URI> extractURIs(Set<Document> docSet) {
-        Set<URI> returnSet = new HashSet<>();
-        for (Document doc : docSet) {
-            returnSet.add(doc.getKey());
-        }
-        return returnSet;
     }
 
     /**
      * Completely remove any trace of any document which contains a word that has the given prefix
      * Search is CASE INSENSITIVE.
      *
-     * @param keywordPrefix
+     * @param keywordPrefix whose docs are being deleted
      * @return a Set of URIs of the documents that were deleted.
      */
     @Override
     public Set<URI> deleteAllWithPrefix(String keywordPrefix) {
-        Set<Document> deleted = searchTrie.deleteAllWithPrefix(cleanKey(keywordPrefix));
+        Set<URI> deleted = searchTrie.deleteAllWithPrefix(cleanKey(keywordPrefix));
         removeDocs(deleted);
-        return extractURIs(deleted);
+        return deleted;
     }
 
     /**
      * set maximum number of documents that may be stored
      *
-     * @param limit
+     * @param limit of documents that can be stored
      */
     @Override
     public void setMaxDocumentCount(int limit) {
@@ -514,7 +510,7 @@ public class DocumentStoreImpl implements DocumentStore {
     /**
      * set maximum number of bytes of memory that may be used by all the documents in memory combined
      *
-     * @param limit
+     * @param limit of bytes that can have documents stored
      */
     @Override
     public void setMaxDocumentBytes(int limit) {
@@ -539,12 +535,14 @@ public class DocumentStoreImpl implements DocumentStore {
 }
 
 // this comparator compares documents by number of a certain word
-class DocComparator implements Comparator<Document> {
+class DocComparator implements Comparator<URI> {
 
-    private String keyWord; // this is the word that we compare by
+    private final String keyWord; // this is the word that we compare by
+    private final BTree<URI, Document> tree;
 
-    public DocComparator(String keyWord) {
+    public DocComparator(String keyWord, BTree<URI, Document> tree) {
         this.keyWord = keyWord;
+        this.tree = tree;
     }
 
     /**
@@ -588,23 +586,25 @@ class DocComparator implements Comparator<Document> {
      *                              being compared by this comparator.
      */
     @Override
-    public int compare(Document o1, Document o2) {
+    public int compare(URI o1, URI o2) {
         if (o1 == null || o2 == null) {
             throw new NullPointerException();
         }
         // I think that normally, it should be the opposite, as this is saying that o1 is smaller than o2 when it is actually greater
         // But this makes sense, because we want it in reverse order
-        return o2.wordCount(keyWord) - o1.wordCount(keyWord);
+        return tree.get(o2).wordCount(keyWord) - tree.get(o1).wordCount(keyWord);
     }
 }
 
 // this comparator compares documents by number of a certain prefix
-class PrefixComparator implements Comparator<Document> {
+class PrefixComparator implements Comparator<URI> {
 
-    private String prefix; // this is the prefix that we compare by
+    private final String prefix; // this is the prefix that we compare by
+    private final BTree<URI, Document> tree;
 
-    public PrefixComparator(String prefix) {
+    public PrefixComparator(String prefix, BTree<URI, Document> tree) {
         this.prefix = prefix;
+        this.tree = tree;
     }
 
     /**
@@ -648,13 +648,13 @@ class PrefixComparator implements Comparator<Document> {
      *                              being compared by this comparator.
      */
     @Override
-    public int compare(Document o1, Document o2) {
+    public int compare(URI o1, URI o2) {
         if (o1 == null || o2 == null) {
             throw new NullPointerException();
         }
         // I think that normally, it should be the opposite, as this is saying that o1 is smaller than o2 when it is actually greater
         // But this makes sense, because we want it in reverse order
-        return prefixCount(o2) - prefixCount(o1);
+        return prefixCount(tree.get(o2)) - prefixCount(tree.get(o1));
     }
 
     // this returns the number of times the prefix is in the document
