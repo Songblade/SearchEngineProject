@@ -486,7 +486,7 @@ public class DocumentStoreTest {
 
     // and deleteAllByPrefix
     @Test
-    public void testDeleteAllWithPrefixRemovesDocFromDisk() throws IOException {
+    public void testDeleteAllWithPrefixRemovesDocFromDisk() {
         store.setMaxDocumentCount(6);
         // I want to interact with Documents 1, 3, 4, and 5, so that 0 and 2 get destroyed by the memory crunch
         store.getDocument(uris[1]);
@@ -545,9 +545,77 @@ public class DocumentStoreTest {
         assertFalse(paths[1].exists());
     }
 
+    // same as previous but with put(null)
+    @Test
+    public void testPutNullWhenWasOnDiskPutsBackOnDisk() throws IOException {
+        store.setMaxDocumentCount(6);
+        for (int i = 0; i < 6; i++) {
+            assertEquals(docs[i], store.getDocument(uris[i]));
+        }
+        store.putDocument(streams[6], uris[6], DocumentFormat.TXT);
+        assertTrue(paths[0].exists());
+        assertFalse(paths[1].exists());
+
+        store.putDocument(null, uris[0], DocumentFormat.BINARY);
+        assertFalse(paths[0].exists());
+        assertFalse(paths[1].exists());
+
+        store.undo();
+        assertTrue(paths[0].exists());
+        assertFalse(paths[1].exists());
+    }
+
+    // make sure also works with deleteAll
+    @Test
+    public void testDeleteAllWhenOnDiskPutsBackOnDisk() {
+        // I want to interact with Documents 0 and 1, so that 2 gets destroyed by the memory crunch
+        store.getDocument(uris[0]);
+        store.getDocument(uris[1]);
+
+        store.setMaxDocumentCount(5);
+        assertTrue(paths[2].exists());
+        assertFalse(paths[4].exists());
+
+        store.deleteAll("eat");
+
+        assertFalse(paths[2].exists());
+        assertFalse(paths[4].exists());
+
+        store.undo();
+
+        assertTrue(paths[2].exists());
+        assertFalse(paths[4].exists());
+    }
+
+    // now testing deleteAllWithPrefix
+    @Test
+    public void testDeleteAllWithPrefixUndoWhenOnDiskPutsBackOnDisk() {
+        store.setMaxDocumentCount(6);
+        // I want to interact with Documents 1, 3, 4, and 5, so that 0 and 2 get destroyed by the memory crunch
+        store.getDocument(uris[1]);
+        store.getDocument(uris[3]);
+        store.getDocument(uris[4]);
+        store.getDocument(uris[5]);
+
+        assertFalse(paths[0].exists());
+        assertFalse(paths[2].exists());
+
+        store.setMaxDocumentCount(4);
+        assertTrue(paths[0].exists());
+        assertTrue(paths[2].exists());
+
+        store.deleteAllWithPrefix("eat");
+        assertFalse(paths[0].exists());
+        assertFalse(paths[2].exists());
+
+        store.undo();
+        assertTrue(paths[0].exists());
+        assertTrue(paths[2].exists());
+    }
+
     // tests that if it was not on the disk, undo does not make it there
     @Test
-    public void testDeleteUndoWhenWasNotOnDiskDoesNotPutBackOn() throws IOException {
+    public void testDeleteUndoWhenWasNotOnDiskDoesNotPutBackOn() {
         for (int i = 0; i < 6; i++) {
             assertEquals(docs[i], store.getDocument(uris[i]));
         }
