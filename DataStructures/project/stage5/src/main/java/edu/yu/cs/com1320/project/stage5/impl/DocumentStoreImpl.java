@@ -17,7 +17,7 @@ public class DocumentStoreImpl implements DocumentStore {
     private final Stack<Undoable> commandStack;
     private final Trie<URI> searchTrie;
     private final MinHeap<DocShell> memoryHeap;
-    private final Set<URI> docsInMemory; // a set of documents that are in memory
+    private final Set<URI> docsOnDisk; // a set of documents that are in the disk
     private int maxDocCount = -1; // maximum number of docs allowed, -1 means no limit
     private int maxDocBytes = -1; // maximum number of doc bytes allowed, -1 means no limit
     private int docCount; // current number of docs
@@ -105,7 +105,7 @@ public class DocumentStoreImpl implements DocumentStore {
         searchTrie = new TrieImpl<>();
         memoryHeap = new MinHeapImpl<>();
         storeTree.setPersistenceManager(new DocumentPersistenceManager(baseDir));
-        docsInMemory = new HashSet<>();
+        docsOnDisk = new HashSet<>();
     }
 
     /**
@@ -133,7 +133,9 @@ public class DocumentStoreImpl implements DocumentStore {
         // I'm honestly not sure how no one caught the problem of never removing old docs from tries
         if (storeTree.get(uri) != null) {
             removeDocFromTrie(storeTree.get(uri));
-            removeDocFromHeap(storeTree.get(uri));
+            if (!docsOnDisk.contains(uri)) {
+                removeDocFromHeap(storeTree.get(uri));
+            }
         }
 
         //this part deals with the adding the command to the stack
@@ -260,7 +262,7 @@ public class DocumentStoreImpl implements DocumentStore {
         Document deletedDoc = storeTree.get(memoryHeap.remove().uri);
         // removes from hashtable
         storeTree.moveToDisk(deletedDoc.getKey());
-        docsInMemory.add(deletedDoc.getKey());
+        docsOnDisk.add(deletedDoc.getKey());
         // lowers the doc and byte totals
         docCount--;
         docBytes -= getByteLength(deletedDoc);
@@ -332,7 +334,9 @@ public class DocumentStoreImpl implements DocumentStore {
         }
         // if there is something to delete
         removeDocFromTrie(previousDoc);
-        removeDocFromHeap(previousDoc);
+        if (!docsOnDisk.contains(uri)) { // only remove it if it was in local memory and so on the heap
+            removeDocFromHeap(previousDoc);
+        }
         storeTree.put(uri, null);
         return true;
     }
@@ -547,7 +551,9 @@ public class DocumentStoreImpl implements DocumentStore {
             }));
 
             // we delete the doc from our document memory and our word memory
-            removeDocFromHeap(doc);
+            if (!docsOnDisk.contains(uri)) {
+                removeDocFromHeap(doc);
+            }
             removeDocFromTrie(doc);
             storeTree.put(doc.getKey(), null);
         }
@@ -614,13 +620,13 @@ public class DocumentStoreImpl implements DocumentStore {
      * @param doc to be updated
      */
     private void updateDocTime(Document doc) {
-        if (docsInMemory.contains(doc.getKey())) {
+        if (docsOnDisk.contains(doc.getKey())) {
             try {
                 addDocToHeap(doc);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            docsInMemory.remove(doc.getKey());
+            docsOnDisk.remove(doc.getKey());
         } else {
             doc.setLastUseTime(System.nanoTime());
             memoryHeap.reHeapify(new DocShell(doc.getKey(), storeTree));
