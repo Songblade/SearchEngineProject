@@ -402,9 +402,9 @@ public class DocumentStoreImpl implements DocumentStore {
                 if (command == null) {
                     throw new IllegalStateException("No commands with the uri \"" + uri + "\" to be undone");
                 } else if (command instanceof GenericCommand) { // if this is a single command
-                    undone = checkAndDeleteGenericCommand((GenericCommand<URI>) command, uri, helperStack, true);
+                    undone = checkAndDeleteGenericCommand((GenericCommand<URI>) command, uri, helperStack);
                 } else if (command instanceof CommandSet) {
-                    undone = checkAndDeleteCommandSet((CommandSet<URI>) command, uri, helperStack, true);
+                    undone = checkAndDeleteCommandSet((CommandSet<URI>) command, uri, helperStack);
                 }
             } while (!undone);
         } finally {
@@ -416,11 +416,9 @@ public class DocumentStoreImpl implements DocumentStore {
     // I am making this generic because I can, even though I will only ever use it with URI
     // if this is the right command, we delete it, otherwise, we put it on the helper stack
     // undoing in the process if appropriate
-    private <T> boolean checkAndDeleteGenericCommand(GenericCommand<T> command, T uri, Stack<Undoable> helperStack, boolean undoing) {
+    private <T> boolean checkAndDeleteGenericCommand(GenericCommand<T> command, T uri, Stack<Undoable> helperStack) {
         if (command.getTarget().equals(uri)) { // if we found our command
-            if (undoing) {
-                command.undo();
-            }
+            command.undo();
             return true;
         }
         // if this is a dud that is not getting undone
@@ -431,22 +429,9 @@ public class DocumentStoreImpl implements DocumentStore {
     // if the command set has the right command, we delete the command (and maybe the entire set), if not, we put it
     // on the helper stack
     // undoing also if appropriate
-    private <T> boolean checkAndDeleteCommandSet(CommandSet<T> commandSet, T uri, Stack<Undoable> helperStack, boolean undoing) {
+    private <T> boolean checkAndDeleteCommandSet(CommandSet<T> commandSet, T uri, Stack<Undoable> helperStack) {
         if (commandSet.containsTarget(uri)) { // if we found our command
-            if (undoing) {
-                commandSet.undo(uri);
-            } else {
-                Iterator<GenericCommand<T>> iterator = commandSet.iterator();
-                while (iterator.hasNext()) {
-                    // goes through the stuff in the commandSet, and removes without undoing the now-faulty
-                        // command
-                    if (iterator.next().getTarget().equals(uri)) {
-                        iterator.remove();
-                        break;
-                    }
-                }
-            }
-
+            commandSet.undo(uri);
             // if there are still more commands in it, put it back in the commandStack
             // so it can be undone from again in the future
             if (commandSet.size() > 0) {
@@ -564,6 +549,7 @@ public class DocumentStoreImpl implements DocumentStore {
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
+                    return false; // since I can't throw an exception, I will allow for this
                 }
                 return true;
             }));
