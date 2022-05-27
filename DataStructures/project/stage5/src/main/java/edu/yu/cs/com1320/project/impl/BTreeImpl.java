@@ -263,6 +263,9 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
         if (k == null) {
             throw new IllegalArgumentException("key is null");
         }
+        if (memory == null) {
+            throw new IllegalStateException("No persistence manager has been set");
+        }
         Value value = get(k);
         if (value == null) {
             throw new IllegalStateException("Value is not in memory");
