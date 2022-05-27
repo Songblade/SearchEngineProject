@@ -21,7 +21,7 @@ public class DocumentStoreAPITest {
         @SuppressWarnings("rawtypes")
         Class[] classes = DocumentStoreImpl.class.getInterfaces();
         assertTrue(classes.length == 1);
-        assertTrue(classes[0].getName().equals("edu.yu.cs.com1320.project.stage4.DocumentStore"));
+        assertTrue(classes[0].getName().equals("edu.yu.cs.com1320.project.stage5.DocumentStore"));
     }
 
     @Test

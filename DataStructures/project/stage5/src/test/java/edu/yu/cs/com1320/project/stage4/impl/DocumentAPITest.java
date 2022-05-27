@@ -21,7 +21,7 @@ public class DocumentAPITest {
         @SuppressWarnings("rawtypes")
         Class[] classes = DocumentImpl.class.getInterfaces();
         assertTrue(classes.length == 1, "length of classes is " + classes.length);
-        assertTrue(classes[0].getName().equals("edu.yu.cs.com1320.project.stage4.Document"));
+        assertTrue(classes[0].getName().equals("edu.yu.cs.com1320.project.stage5.Document"));
     }
 
     @Test
@@ -37,7 +37,7 @@ public class DocumentAPITest {
                 }
             }
         }
-        assertTrue(publicMethodCount == 7, "method count is " + publicMethodCount + " names are " + names);
+        assertTrue(publicMethodCount == 9, "method count is " + publicMethodCount + " names are " + names);
     }
 
     //STAGE 4 tests
