@@ -545,6 +545,28 @@ public class DocumentStoreTest {
         assertFalse(paths[1].exists());
     }
 
+    // same as before but with put replace
+    @Test
+    public void testPutReplaceWhenWasOnDiskPutsBackOnDisk() throws IOException {
+        store.setMaxDocumentCount(6);
+        for (int i = 0; i < 6; i++) {
+            assertEquals(docs[i], store.getDocument(uris[i]));
+        }
+        store.putDocument(streams[6], uris[6], DocumentFormat.TXT);
+        assertTrue(paths[0].exists());
+        assertFalse(paths[1].exists());
+
+        store.setMaxDocumentCount(10);
+
+        store.putDocument(streams[7], uris[0], DocumentFormat.BINARY);
+        assertFalse(paths[0].exists());
+        assertFalse(paths[1].exists());
+
+        store.undo();
+        assertTrue(paths[0].exists());
+        assertFalse(paths[1].exists());
+    }
+
     // same as previous but with put(null)
     @Test
     public void testPutNullWhenWasOnDiskPutsBackOnDisk() throws IOException {
