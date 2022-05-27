@@ -525,6 +525,43 @@ public class DocumentStoreTest {
 
     // I will also need to make something for how undo interacts with memory, but first need to figure out
         // how exactly undo interacts with memory
+    // test that if the document was on the disk, is deleted, and is undone, it is on the disk again
+    @Test
+    public void testDeleteUndoWhenWasOnDiskPutsBackOnDisk() throws IOException {
+        store.setMaxDocumentCount(6);
+        for (int i = 0; i < 6; i++) {
+            assertEquals(docs[i], store.getDocument(uris[i]));
+        }
+        store.putDocument(streams[6], uris[6], DocumentFormat.TXT);
+        assertTrue(paths[0].exists());
+        assertFalse(paths[1].exists());
+
+        store.deleteDocument(uris[0]);
+        assertFalse(paths[0].exists());
+        assertFalse(paths[1].exists());
+
+        store.undo();
+        assertTrue(paths[0].exists());
+        assertFalse(paths[1].exists());
+    }
+
+    // tests that if it was not on the disk, undo does not make it there
+    @Test
+    public void testDeleteUndoWhenWasNotOnDiskDoesNotPutBackOn() throws IOException {
+        for (int i = 0; i < 6; i++) {
+            assertEquals(docs[i], store.getDocument(uris[i]));
+        }
+        assertFalse(paths[0].exists());
+        assertFalse(paths[1].exists());
+
+        store.deleteDocument(uris[0]);
+        assertFalse(paths[0].exists());
+        assertFalse(paths[1].exists());
+
+        store.undo();
+        assertFalse(paths[0].exists());
+        assertFalse(paths[1].exists());
+    }
 
     // tests for the constructors
     // tests that if I use the default constructor, putDocument makes a file in user.dir
