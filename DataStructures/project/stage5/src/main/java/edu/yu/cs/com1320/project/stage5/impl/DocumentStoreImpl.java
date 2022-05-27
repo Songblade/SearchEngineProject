@@ -141,6 +141,7 @@ public class DocumentStoreImpl implements DocumentStore {
         //this part deals with the adding the command to the stack
         // since I need the Command added to add the old doc
         Document previousDoc = storeTree.get(uri);
+        boolean wasOnDisk = docsOnDisk.contains(uri);
         commandStack.push(new GenericCommand<>(uri, (uri1) -> {
             // if previousDoc is null, HashTable will delete it for me
             removeDocFromTrie(doc);
@@ -149,9 +150,13 @@ public class DocumentStoreImpl implements DocumentStore {
             if (previousDoc != null) {
                 putWordsInTrie(previousDoc);
                 try {
-                    addDocToHeap(previousDoc);
-                } catch (IOException e) {
-                    e.printStackTrace(); // I don't like this, but it is being annoying
+                    if (wasOnDisk) {
+                        storeTree.moveToDisk(uri);
+                    } else {
+                        addDocToHeap(previousDoc);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
             return true;
@@ -273,6 +278,9 @@ public class DocumentStoreImpl implements DocumentStore {
      * @param doc to be removed
      */
     private void removeDocFromHeap(Document doc) {
+        if (docsOnDisk.contains(doc.getKey())) { // should stop problems from removing docs
+            return;                             // not actually in the heap
+        }
         Stack<DocShell> helperStack = new StackImpl<>(); // to store docs
         DocShell foundDoc = memoryHeap.remove();
         while (!doc.getKey().equals(foundDoc.uri)) {
@@ -311,19 +319,24 @@ public class DocumentStoreImpl implements DocumentStore {
             return false; // not deleting anything, because nothing to delete
         }
         Document previousDoc = storeTree.get(uri);
+        boolean wasOnDisk = docsOnDisk.contains(uri);
         commandStack.push(new GenericCommand<>(uri, (uri1) -> {
             // I don't have to worry about taking out what was previous, because this is delete
             // I need to figure out what to do if the doc is too big
             if (maxDocBytes != -1 && getByteLength(previousDoc) > maxDocBytes) {
                 throw new IllegalArgumentException("document size " + getByteLength(previousDoc) + " bytes is greater than limit of " + maxDocBytes);
             }
-            try {
-                addDocToHeap(previousDoc);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
             // if previousDoc is null, HashTable will delete it for me
             storeTree.put(uri, previousDoc);
+            try {
+                if (wasOnDisk) {
+                    storeTree.moveToDisk(uri);
+                } else {
+                    addDocToHeap(previousDoc);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             putWordsInTrie(previousDoc);
             return true;
         }));
@@ -335,7 +348,7 @@ public class DocumentStoreImpl implements DocumentStore {
         // if there is something to delete
         removeDocFromTrie(previousDoc);
         if (!docsOnDisk.contains(uri)) { // only remove it if it was in local memory and so on the heap
-            removeDocFromHeap(previousDoc);
+            removeDocFromHeap(previousDoc); // should no longer be necessary
         }
         storeTree.put(uri, null);
         return true;
@@ -538,20 +551,25 @@ public class DocumentStoreImpl implements DocumentStore {
         CommandSet<URI> undoActions = new CommandSet<>();
         for (URI uri : uris) {
             Document doc = storeTree.get(uri);
+            boolean wasOnDisk = docsOnDisk.contains(uri);
             // we create an undo for the document, which will add it back to both the HashTable and the Trie
             undoActions.addCommand(new GenericCommand<>(uri, uri1 -> {
                 storeTree.put(uri, doc);
                 putWordsInTrie(doc);
                 try {
-                    addDocToHeap(doc);
-                } catch (IOException e) {
+                    if (wasOnDisk) {
+                        storeTree.moveToDisk(uri);
+                    } else {
+                        addDocToHeap(doc);
+                    }
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
                 return true;
             }));
 
             // we delete the doc from our document memory and our word memory
-            if (!docsOnDisk.contains(uri)) {
+            if (!docsOnDisk.contains(uri)) { // the if should no longer be necessary
                 removeDocFromHeap(doc);
             }
             removeDocFromTrie(doc);
