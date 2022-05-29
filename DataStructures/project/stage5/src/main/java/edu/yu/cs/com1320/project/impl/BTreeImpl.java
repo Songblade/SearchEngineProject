@@ -189,8 +189,7 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
      * @param height that we are currently at, where root is considered the max height
      * @return null if no new node was created (i.e. just added a new Entry into an existing node). If a new node was created due to the need to split, returns the new node
      */
-    private Node<Key, Value> put(Node<Key, Value> currentNode, Key key, Value val, int height)
-    {
+    private Node<Key, Value> put(Node<Key, Value> currentNode, Key key, Value val, int height) {
         int j;
         Entry<Key, Value> newEntry = new Entry<>(key, val);
 
@@ -232,6 +231,17 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
         for (int i = currentNode.entryCount; i > j; i--) {
             currentNode.entries[i] = currentNode.entries[i - 1];
         }
+        return addNewEntry(currentNode, newEntry, j);
+    }
+
+    /**
+     * Adds the new entry to the selected location in the selected node
+     * @param currentNode where we are adding the entry
+     * @param newEntry we are adding
+     * @param j location in the node where the entry is being added
+     * @return null if the node isn't split, the new node if it is
+     */
+    private Node<Key, Value> addNewEntry(Node<Key, Value> currentNode, Entry<Key, Value> newEntry, int j) {
         //add new entry
         currentNode.entries[j] = newEntry;
         currentNode.entryCount++;
