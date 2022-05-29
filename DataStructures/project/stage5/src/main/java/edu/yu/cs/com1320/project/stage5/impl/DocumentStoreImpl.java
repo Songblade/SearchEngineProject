@@ -138,29 +138,7 @@ public class DocumentStoreImpl implements DocumentStore {
             }
         }
 
-        //this part deals with the adding the command to the stack
-        // since I need the Command added to add the old doc
-        Document previousDoc = storeTree.get(uri);
-        boolean wasOnDisk = docsOnDisk.contains(uri);
-        commandStack.push(new GenericCommand<>(uri, (uri1) -> {
-            // if previousDoc is null, HashTable will delete it for me
-            removeDocFromTrie(doc);
-            removeDocFromHeap(doc);
-            storeTree.put(uri, previousDoc);
-            if (previousDoc != null) {
-                putWordsInTrie(previousDoc);
-                try {
-                    if (wasOnDisk) {
-                        storeTree.moveToDisk(uri);
-                    } else {
-                        addDocToHeap(previousDoc);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            return true;
-        }));
+        pushUndoForPut(doc);
 
         storeTree.put(uri, doc);
         addDocToHeap(doc);
@@ -294,6 +272,35 @@ public class DocumentStoreImpl implements DocumentStore {
         // show that the doc has been removed
         docCount--;
         docBytes -= getByteLength(doc);
+    }
+
+    /**
+     * Pushes the undo for put to the undo stack, to be undone later
+     * @param doc that is being added to the stack
+     */
+    private void pushUndoForPut(Document doc) {
+        URI uri = doc.getKey();
+        Document previousDoc = storeTree.get(uri);
+        boolean wasOnDisk = docsOnDisk.contains(uri);
+        commandStack.push(new GenericCommand<>(uri, (uri1) -> {
+            // if previousDoc is null, HashTable will delete it for me
+            removeDocFromTrie(doc);
+            removeDocFromHeap(doc);
+            storeTree.put(uri, previousDoc);
+            if (previousDoc != null) {
+                putWordsInTrie(previousDoc);
+                try {
+                    if (wasOnDisk) {
+                        storeTree.moveToDisk(uri);
+                    } else {
+                        addDocToHeap(previousDoc);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            return true;
+        }));
     }
 
     /**
