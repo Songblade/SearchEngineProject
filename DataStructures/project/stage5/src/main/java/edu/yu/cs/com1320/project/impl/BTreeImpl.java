@@ -132,19 +132,9 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
             throw new IllegalArgumentException("argument key to put() is null");
         }
         //if the key already exists in the b-tree, simply replace the value
-        Entry<Key, Value> alreadyThere = this.get(this.root, k, this.height);
-        if(alreadyThere != null) {
-            if (alreadyThere.isInDisk) { // if there is a previous thing in the disk
-                try {
-                    memory.delete(k);
-                } catch (IOException e) {
-                    throw new IllegalStateException(e);
-                }
-            }
-            Value returnVal = alreadyThere.val;
-            alreadyThere.val = v;
-            alreadyThere.isInDisk = false; //just in case, since now it is in local memory
-            return returnVal;
+        Value replacedValue = maybeReplaceValue(k, v);
+        if (replacedValue != null) {
+            return replacedValue;
         }
 
         // if the key does not yet exist in the B-Tree
@@ -165,6 +155,30 @@ public class BTreeImpl<Key extends Comparable<Key>, Value> implements BTree<Key,
         //a split at the root always increases the tree height by 1
         this.height++;
         return null; // because we didn't replace anything
+    }
+
+    /**
+     * If the key is already in the B-Tree, we replace the value
+     * @param key we are looking for
+     * @param value we want to put with that key
+     * @return the previous value if we replaced, null otherwise
+     */
+    private Value maybeReplaceValue(Key key, Value value) {
+        Entry<Key, Value> alreadyThere = this.get(this.root, key, this.height);
+        if(alreadyThere != null) {
+            if (alreadyThere.isInDisk) { // if there is a previous thing in the disk
+                try {
+                    memory.delete(key);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+            Value returnVal = alreadyThere.val;
+            alreadyThere.val = value;
+            alreadyThere.isInDisk = false; //just in case, since now it is in local memory
+            return returnVal;
+        }
+        return null;
     }
 
     /**
