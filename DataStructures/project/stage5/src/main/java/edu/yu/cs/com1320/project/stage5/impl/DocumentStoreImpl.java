@@ -138,7 +138,7 @@ public class DocumentStoreImpl implements DocumentStore {
             }
         }
 
-        pushUndoForPut(doc);
+        pushUndoForPut(uri, doc);
 
         storeTree.put(uri, doc);
         addDocToHeap(doc);
@@ -256,6 +256,9 @@ public class DocumentStoreImpl implements DocumentStore {
      * @param doc to be removed
      */
     private void removeDocFromHeap(Document doc) {
+        if (doc == null) { // so I can remove null documents without a problem of them never having existed
+            return;
+        }
         if (docsOnDisk.contains(doc.getKey())) { // should stop problems from removing docs
             return;                             // not actually in the heap
         }
@@ -276,10 +279,11 @@ public class DocumentStoreImpl implements DocumentStore {
 
     /**
      * Pushes the undo for put to the undo stack, to be undone later
-     * @param doc that is being added to the stack
+     * I think it will also work for undo, if we make the URI given
+     * @param uri that the document being recovered is at
+     * @param doc that is being added to the store, to be deleted in an undo, null for delete
      */
-    private void pushUndoForPut(Document doc) {
-        URI uri = doc.getKey();
+    private void pushUndoForPut(URI uri, Document doc) {
         Document previousDoc = storeTree.get(uri);
         boolean wasOnDisk = docsOnDisk.contains(uri);
         commandStack.push(new GenericCommand<>(uri, (uri1) -> {
@@ -325,28 +329,11 @@ public class DocumentStoreImpl implements DocumentStore {
         if (uri == null) {
             return false; // not deleting anything, because nothing to delete
         }
+
         Document previousDoc = storeTree.get(uri);
-        boolean wasOnDisk = docsOnDisk.contains(uri);
-        commandStack.push(new GenericCommand<>(uri, (uri1) -> {
-            // I don't have to worry about taking out what was previous, because this is delete
-            // I need to figure out what to do if the doc is too big
-            if (maxDocBytes != -1 && getByteLength(previousDoc) > maxDocBytes) {
-                throw new IllegalArgumentException("document size " + getByteLength(previousDoc) + " bytes is greater than limit of " + maxDocBytes);
-            }
-            // if previousDoc is null, HashTable will delete it for me
-            storeTree.put(uri, previousDoc);
-            try {
-                if (wasOnDisk) {
-                    storeTree.moveToDisk(uri);
-                } else {
-                    addDocToHeap(previousDoc);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            putWordsInTrie(previousDoc);
-            return true;
-        }));
+
+        pushUndoForPut(uri, null);
+
         // this has to be after adding the command to the stack, because it is still supposed to add a command
         // even if it does nothing
         if (previousDoc == null) {
