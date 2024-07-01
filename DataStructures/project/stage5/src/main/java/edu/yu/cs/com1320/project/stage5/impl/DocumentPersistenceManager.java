@@ -102,7 +102,7 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
         }
     }
 
-    private File baseDir; // the location where all the files are
+    private final File baseDir; // the location where all the files are
 
     public DocumentPersistenceManager(File baseDir){
         this.baseDir = Objects.requireNonNullElseGet(baseDir, () -> new File(System.getProperty("user.dir")));
@@ -141,9 +141,9 @@ public class DocumentPersistenceManager implements PersistenceManager<URI, Docum
      */
     private void createAllNeededFiles(File fullFile) throws IOException {
         String fileName = fullFile.getPath();
-        int lastSlash = fileName.lastIndexOf('\\');
+        int lastSlash = fileName.lastIndexOf(File.separatorChar);
         if (lastSlash > 0) {
-            String directoryName = fileName.substring(0, fileName.lastIndexOf('\\'));
+            String directoryName = fileName.substring(0, fileName.lastIndexOf(File.separatorChar));
             if (!directoryName.isEmpty()) {
                 File directory = new File(directoryName);
                 Files.createDirectories(directory.toPath()); // doesn't throw errors if some directories exist
